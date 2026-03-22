@@ -2,6 +2,7 @@
 //-- control many archiver routines --
 
 #include "stdafx.h"
+#include <stdio.h>
 #include "resource.h"
 #include "NoahApp.h"
 #include "NoahAM.h"
@@ -12,7 +13,7 @@
 #include "ArcCpt.h"
 
 //----------------------------------------------//
-//------ 実働部隊のデータで初期化しておく ------//
+//------ ??????????f?[?^?????????????? ------//
 //----------------------------------------------//
 
 void CNoahArchiverManager::init()
@@ -21,7 +22,7 @@ void CNoahArchiverManager::init()
 	static int dead[128];
 	while( *kl ) dead[ 0x7f & (*(kl++)) ] = 1;
 
-	// 初期対応形式
+	// ????????`??
 	if( !dead['L'] )	m_AList.add( new CArcLzh );
 	if( !dead['7'] )	m_AList.add( new CArc7z ),
 						m_AList.add( new CArc7zZip );
@@ -38,7 +39,7 @@ void CNoahArchiverManager::init()
 	if( !dead['M'] )	m_AList.add( new CArcMsc );
 	if( !dead['c'] )	m_AList.add( new CArcCpt );
 
-	// 拡張スクリプトロード
+	// ?g???X?N???v?g???[?h
 	char prev_cur[MAX_PATH];
 	::GetCurrentDirectory(MAX_PATH, prev_cur);
 	::SetCurrentDirectory( CArcB2e::init_b2e_path() );
@@ -52,16 +53,16 @@ void CNoahArchiverManager::init()
 }
 
 //----------------------------------------------//
-//------------ ファイルリストを記憶 ------------//
+//------------ ?t?@?C?????X?g???L?? ------------//
 //----------------------------------------------//
 
 unsigned long CNoahArchiverManager::set_files( const cCharArray& files )
 {
-	//-- クリア
+	//-- ?N???A
 	m_FName.empty();
 	m_BasePathList.empty();
 
-	//-- 基底パスを取得( 出来るだけ利用範囲を広げるため、8.3形式で )
+	//-- ???p?X?????( ?o?????????p?????L??????A8.3?`???? )
 	if( files.len() != 0 )
 	{
 		char spath[MAX_PATH];
@@ -75,7 +76,7 @@ unsigned long CNoahArchiverManager::set_files( const cCharArray& files )
 		}
 	}
 
-	//-- 短いファイル名と長いのを両方取得しておく
+	//-- ?Z???t?@?C???????????????????????
 	m_FName.alloc( files.len() );
 	m_BasePathList.alloc( files.len() );
 	for( unsigned int i=0,c=0; i!=files.len(); i++ )
@@ -97,10 +98,10 @@ unsigned long CNoahArchiverManager::set_files( const cCharArray& files )
 }
 
 //----------------------------------------------//
-//--- ファイルリストに解凍ルーチンを割り当て ---//
+//--- ?t?@?C?????X?g?????[?`??????????? ---//
 //----------------------------------------------//
 
-// 指定された拡張子に対応しているルーチンを線形探索
+// ?w?????g???q????????????[?`??????`?T??
 CArchiver* CNoahArchiverManager::fromExt( const char* ext )
 {
 	kiStr tmp = ext;
@@ -115,7 +116,7 @@ CArchiver* CNoahArchiverManager::fromExt( const char* ext )
 
 bool CNoahArchiverManager::map_melters( int mode ) // 1:cmp 2:mlt 3:must_mlt
 {
-	// クリア
+	// ?N???A
 	m_Melters.empty();
 
 #define attrb (m_FName[ct].dwFileAttributes)
@@ -129,27 +130,27 @@ bool CNoahArchiverManager::map_melters( int mode ) // 1:cmp 2:mlt 3:must_mlt
 //		fnm = m_BasePath, fnm += sname;
 		fnm = m_BasePathList[ct], fnm += sname;
 
-		//-- 0byteファイル / ディレクトリは弾く
+		//-- 0byte?t?@?C?? / ?f?B???N?g????e??
 		if( !(attrb & FILE_ATTRIBUTE_DIRECTORY) && 0!=kiFile::getSize( fnm, 0 ) )
 		{
-			//-- まず対応拡張子かどうかで候補Ａを一つ選出
+			//-- ???????g???q???????????`?????I?o
 			CArchiver* x = fromExt( ext=kiPath::ext(lname) );
 
-			//-- 候補Ａで、ファイル内容によるチェック
+			//-- ???`??A?t?@?C?????e????`?F?b?N
 			if( x && x->check( fnm ) )
 			{
 				m_Melters.add( x );
 				continue;
 			}
 
-			//-- 候補Ａが内容チェック不可なものだったらそれを使う
+			//-- ???`?????e?`?F?b?N?s?????????????b????g??
 			if( x && !(x->ability() & aCheck) )
 			{
 				m_Melters.add( x );
 				continue;
 			}
 
-			//-- 候補Ａがダメなら、その他の内容チェック可能なルーチン全てで試す
+			//-- ???`???_?????A?????????e?`?F?b?N??\????[?`???S??????
 			if( mode!=1 || 0==ki_strcmpi( "exe", ext ) )
 			{
 				for( unsigned long j=0; j!=m_AList.len(); j++ )
@@ -163,9 +164,9 @@ bool CNoahArchiverManager::map_melters( int mode ) // 1:cmp 2:mlt 3:must_mlt
 			}
 		}
 
-		//-- チェックの結果、解凍不能でしたとさ
+		//-- ?`?F?b?N?????A??s?\????????
 		if( mode!=3 )
-			return false; //-- 解凍専用モードでなければ終了
+			return false; //-- ???p???[?h???????I??
 		m_Melters.add( NULL ), bad++;
 	}
 #undef sname
@@ -176,7 +177,7 @@ bool CNoahArchiverManager::map_melters( int mode ) // 1:cmp 2:mlt 3:must_mlt
 }
 
 //----------------------------------------------//
-//--- ファイルリストに圧縮ルーチンを割り当て ---//
+//--- ?t?@?C?????X?g????k???[?`??????????? ---//
 //----------------------------------------------//
 
 bool CNoahArchiverManager::map_compressor( const char* ext, const char* method, bool sfx )
@@ -187,13 +188,13 @@ bool CNoahArchiverManager::map_compressor( const char* ext, const char* method, 
 
 	for( unsigned int i=0; i!=m_AList.len(); i++ )
 		if( -1 != (m=m_AList[i]->cancompressby(ext,method,sfx)) )
-			if( m!=-2 ) // 完全一致
+			if( m!=-2 ) // ???S??v
 			{
 				m_Compressor = m_AList[i];
 				m_Method = m;
 				break;
 			}
-			else if( m_Method == -1 ) // 形式名のみ一致した最初のモノ
+			else if( m_Method == -1 ) // ?`????????v???????????m
 			{
 				m_Compressor = m_AList[i];
 				m_Method = m_AList[i]->cmp_mhd_default();
@@ -202,7 +203,7 @@ bool CNoahArchiverManager::map_compressor( const char* ext, const char* method, 
 }
 
 //----------------------------------------------//
-//------------ バージョン情報文字列 ------------//
+//------------ ?o?[?W?????????? ------------//
 //----------------------------------------------//
 
 void CNoahArchiverManager::get_version( kiStr& str )
@@ -214,7 +215,7 @@ void CNoahArchiverManager::get_version( kiStr& str )
 }
 
 //----------------------------------------------//
-//--------------- 圧縮形式リスト ---------------//
+//--------------- ???k?`?????X?g ---------------//
 //----------------------------------------------//
 
 static unsigned int find( const cCharArray& x, const char* o )
@@ -274,7 +275,7 @@ void CNoahArchiverManager::get_cmpmethod(
 }
 
 //----------------------------------------------//
-//--------------- 書庫一覧モード ---------------//
+//--------------- ????????[?h ---------------//
 //----------------------------------------------//
 
 #include "SubDlg.h"
@@ -287,11 +288,11 @@ void CNoahArchiverManager::do_listing( kiPath& destdir )
 	bool   rmn = mycnf().mnonum();
 	destdir.beBackSlash( true );
 
-	//-- ダイアログの個数カウンタをクリア
+	//-- ?_?C?A???O?????J?E???^???N???A
 	kiArray<CArcViewDlg*> views;
 	CArcViewDlg::clear();
 
-	//-- ダイアログ起動
+	//-- ?_?C?A???O?N??
 	for( unsigned int i=0; i!=m_FName.len(); i++ )
 	{
 		if( !m_Melters[i] )
@@ -312,33 +313,33 @@ void CNoahArchiverManager::do_listing( kiPath& destdir )
 		x->createModeless( NULL );
 	}
 
-	//-- 全部終了するまで待機
+	//-- ?S???I?????????@
 	kiWindow::msgLoop( kiWindow::GET );
 
-	//-- お終い
+	//-- ???I??
 	app()->setMainWnd( mptr );
 	for( i=0; i!=views.len(); i++ )
 		delete views[i];
 }
 
 //----------------------------------------------//
-//----------------- 解凍作業 -------------------//
+//----------------- ???? -------------------//
 //----------------------------------------------//
 
 void CNoahArchiverManager::do_melting( kiPath& destdir )
 {
-	//-- 設定ロード
+	//-- ????[?h
 	const int  mdf = mycnf().mkdir();  // Make Directory Flag( 0:no 1:no1file 2: noddir 3:yes )
 	const bool rmn = mycnf().mnonum(); // Remove NuMber ?
 
-	//-- 出力先
+	//-- ?o???
 	destdir.beBackSlash( true );
 	destdir.mkdir(), destdir.beShortPath();
 
 	for( unsigned int i=0; i!=m_FName.len(); i++ )
 		if( m_Melters[i] )
 		{
-			//-- 出力先
+			//-- ?o???
 
 			int mk=2; // 0:no 1:yes 2:???
 			kiPath ddir( destdir ), dnm;
@@ -353,7 +354,7 @@ void CNoahArchiverManager::do_melting( kiPath& destdir )
 				anm+=m_FName[i].cFileName;
 				int c = m_Melters[i]->contents( anm, dnm );
 				if( c==aSingleDir || (c==aSingleFile && mdf==1) )
-					mk=0; // ２重フォルダ防止処理(強)
+					mk=0; // ?Q?d?t?H???_?h?~????(??)
 				else if( c==aMulti )
 					mk=1;
 			}
@@ -367,7 +368,7 @@ void CNoahArchiverManager::do_melting( kiPath& destdir )
 				ddir.beShortPath();
 			}
 
-			//-- 解凍！
+			//-- ??I
 
 			arcname an( m_BasePathList[i],
 //			arcname an( m_BasePath,
@@ -376,19 +377,19 @@ void CNoahArchiverManager::do_melting( kiPath& destdir )
 			int result = m_Melters[i]->melt( an, ddir );
 			if( result<0x8000 )
 			{
-				if( mk==2 ) // ２重フォルダ防止処理(弱)
+				if( mk==2 ) // ?Q?d?t?H???_?h?~????(??)
 					break_ddir( ddir, mdf==2 );
-				else if( mk==0 && dnm.len() ) // ２重フォルダ防止処理(強)
-					if( dnm.len()<=1 || dnm[1]!=':' ) // 絶対パスは開かない
+				else if( mk==0 && dnm.len() ) // ?Q?d?t?H???_?h?~????(??)
+					if( dnm.len()<=1 || dnm[1]!=':' ) // ???p?X??J?????
 						ddir+=dnm, ddir+='\\';
-				// 出力先を開くかも
+				// ?o?????J??????
 				myapp().open_folder( ddir, 1 );
 			}
 			else if( result!=0x8020 )
 			{
-				//エラー！
+				//?G???[?I
 				char str[255];
-				wsprintf( str, "%s\nError No: [%x]",
+				_snprintf_s( str, sizeof str, _TRUNCATE, "%s\nError No: [%x]",
 					(const char*)kiStr().loadRsrc( IDS_M_ERROR ), result );
 				app()->msgBox( str );
 			}
@@ -397,16 +398,16 @@ void CNoahArchiverManager::do_melting( kiPath& destdir )
 
 void CNoahArchiverManager::generate_dirname( const char* src, kiPath& dst, bool rmn )
 {
-	// srcで示された書庫名からディレクトリ名を生成し、
-	// dstへ足す。rmn==trueなら末尾の数字も削除
+	// src????????????????f?B???N?g??????????A
+	// dst??????Brmn==true??????????????
 
-	// 一番左の . と左から二番目の . を探す
+	// ?????? . ??????????? . ??T??
 	const char *fdot=NULL, *sdot=NULL, *tail;
 	for( tail=src; *tail; tail=kiStr::next(tail) )
 		if( *tail=='.' )
 			sdot=fdot, fdot=tail;
 
-	// .tar.xxx か、.xxx.gz/.xxx.z/.xxx.bz2 なら二つ削除
+	// .tar.xxx ???A.xxx.gz/.xxx.z/.xxx.bz2 ??????
 	if( fdot )
 	{
 		tail = fdot;
@@ -422,7 +423,7 @@ void CNoahArchiverManager::generate_dirname( const char* src, kiPath& dst, bool 
 				tail = sdot;
 	}
 
-	// 末尾の数字と'-'と'_'と'.'削除。半角スペースも。
+	// ???????????'-'??'_'??'.'???B???p?X?y?[?X???B
 	bool del[256];
 	ki_memzero( del, sizeof(del) );
 	if( rmn )
@@ -442,7 +443,7 @@ void CNoahArchiverManager::generate_dirname( const char* src, kiPath& dst, bool 
 	if( mjs && mjs!=src )
 		tail = mjs;
 
-	// 空になってしまったら "noahmelt" という名前にしてしまう。
+	// ??????????????? "noahmelt" ????????O??????????B
 	if( src==tail )
 		dst += "noahmelt";
 	else
@@ -452,14 +453,14 @@ void CNoahArchiverManager::generate_dirname( const char* src, kiPath& dst, bool 
 
 bool CNoahArchiverManager::break_ddir( kiPath& dir, bool onlydir )
 {
-// ２重フォルダ or 単一ファイル 状態を解消
+// ?Q?d?t?H???_ or ?P??t?@?C?? ????????
 //
-// 素直に格納ファイル名を一度走査するのが本当なんですが、
-// 特に巨大書庫の時速度低下が激しいのと、FindFirst系を
-// サポートしたDLLや内蔵エンジン以外に対応できないという
-// 欠点があるため、相変わらず Noah 2.xx と同じ手法です。
+// ?f????i?[?t?@?C????????x???????????{??????????A
+// ??????????????x?????????????AFindFirst?n??
+// ?T?|?[?g????DLL??????G???W????O???????????????
+// ???_????????A??????y Noah 2.xx ???????@????B
 
-//-- 中に１個しか入ってないことを確認 -----------------
+//-- ????P???????????????????m?F -----------------
 	char wild[MAX_PATH];
 	ki_strcpy( wild, dir );
 	ki_strcat( wild, "*.*" );
@@ -473,21 +474,21 @@ bool CNoahArchiverManager::break_ddir( kiPath& dir, bool onlydir )
 	find.close();
 //----------------------------------------------------
 
-//-- to:最終移動先ファイル名。ついでに、カレントDirは消せない問題の回避策 -----
+//-- to:??I?????t?@?C?????B??????A?J?????gDir???????????????? -----
 	kiPath to(dir); to.beBackSlash( false ), to.beDirOnly();
 	::SetCurrentDirectory( to );
 	to += fd.cFileName;
 //-------------------------------------------------------------------------
 
-//-- ファイルだった場合 --------------------------------------
+//-- ?t?@?C?????????? --------------------------------------
 	if( !(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) )
 	{
 		if( !onlydir )
 		{
-			// now 現在のファイル名
+			// now ?????t?@?C????
 			kiStr now=dir; now+=fd.cFileName;
 
-			// now -> to 移動
+			// now -> to ???
 			if( ::MoveFile( now, to ) )
 			{
 				dir.remove();
@@ -496,11 +497,11 @@ bool CNoahArchiverManager::break_ddir( kiPath& dir, bool onlydir )
 			}
 		}
 	}
-//-- フォルダだった場合 ----------------------------------------
+//-- ?t?H???_???????? ----------------------------------------
 	else
 	{
-		// 'base/aaa/aaa/' だと中のaaaを外にmoveできない。
-		// よって、回避策。-> 'base/aaa_noah_tmp_178116/aaa/'
+		// 'base/aaa/aaa/' ???????aaa???O??move???????B
+		// ?????A?????B-> 'base/aaa_noah_tmp_178116/aaa/'
 
 		dir.beBackSlash( false );
 		kiFindFile::findfirst( dir, &fd3 );
@@ -508,10 +509,10 @@ bool CNoahArchiverManager::break_ddir( kiPath& dir, bool onlydir )
 
 		if( ::MoveFile( dir, dirx ) )
 		{
-			// now 現在のファイル名
+			// now ?????t?@?C????
 			kiStr now( dirx ); now+='\\', now+=fd.cFileName;
 
-			// ディレクトリを移動
+			// ?f?B???N?g???????
 			if( ::MoveFile( now, to ) )
 			{
 				dirx.remove();
@@ -533,19 +534,19 @@ bool CNoahArchiverManager::break_ddir( kiPath& dir, bool onlydir )
 }
 
 //----------------------------------------------//
-//----------------- 圧縮作業 -------------------//
+//----------------- ???k??? -------------------//
 //----------------------------------------------//
 
 void CNoahArchiverManager::do_compressing( kiPath& destdir, bool each )
 {
 	int result = 0xffff, tr;
 
-	// 出力先を確実に作っておく
+	// ?o?????m???????????
 	destdir.beBackSlash( true );
 	destdir.mkdir();
 	destdir.beShortPath();
 
-	// 個別圧縮モードか、Archiving不可の形式なら一個ずつ
+	// ?????k???[?h???AArchiving?s???`??????????
 	if( each || !(m_Compressor->ability() & aArchive) )
 	{
 		wfdArray templist;
@@ -562,14 +563,14 @@ void CNoahArchiverManager::do_compressing( kiPath& destdir, bool each )
 	else
 		result = m_Compressor->compress( m_BasePath,m_FName,destdir,m_Method,m_Sfx );
 
-	// 開くかも
+	// ?J??????
 	if( result<0x8000 )
 		myapp().open_folder( destdir, 2 );
 	else if( result!=0x8020 )
 	{
-		//エラー！
+		//?G???[?I
 		char str[255];
-		wsprintf( str, "%s\nError No: [%x]", "Compression Error", result );
+		_snprintf_s( str, sizeof str, _TRUNCATE, "%s\nError No: [%x]", "Compression Error", result );
 		app()->msgBox( str );
 	}
 }

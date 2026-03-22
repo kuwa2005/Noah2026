@@ -4,13 +4,14 @@
 #include "stdafx.h"
 #include "NoahApp.h"
 #include "resource.h"
+#include <stdio.h>
 
 #if _MSC_VER >= 1300
 extern "C" { int _afxForceEXCLUDE; }
 extern "C" BOOL WINAPI _imp__IsDebuggerPresent() { return FALSE; }
 #endif
 
-// プロセス個数制限ゾーン
+// ?v???Z?X????????]?[??
 class ProcessNumLimitZone
 {
 	HANDLE m_han;
@@ -34,62 +35,62 @@ public:
 };
 
 //----------------------------------------------//
-//--------- Noah のエントリポイント ------------//
+//--------- Noah ??G???g???|?C???g ------------//
 //----------------------------------------------//
 
 void kilib_create_new_app()
 {
-	//-- kilib にアプリケーションを設定
+	//-- kilib ??A?v???P?[?V????????
 	new CNoahApp;
 }
 
 void CNoahApp::run( kiCmdParser& cmd )
 {
-	//-- 初期化
+	//-- ??????
 	m_cnfMan.init();
 	m_arcMan.init();
 
-	//-- コマンドラインパラメータ保持
+	//-- ?R?}???h???C???p?????[?^???
 	m_pCmd = &cmd;
 
-	//-- 「ファイル名が渡されてない or Shift押し起動」なら設定画面表示
+	//-- ?u?t?@?C???????n??????? or Shift?????N???v???????\??
 	if( cmd.param().len()==0 || keyPushed(VK_SHIFT) )
 	{
-		//-- Load-INI ( 全部 )
+		//-- Load-INI ( ?S?? )
 		m_cnfMan.load( All );
-		//-- 設定画面表示
+		//-- ?????\??
 		m_cnfMan.dialog();
 	}
 	else
 	{
-		//-- 圧縮解凍などの作業
+		//-- ???k???????
 		do_cmdline( true );
 	}
 
-	//-- 終了処理
+	//-- ?I??????
 	m_tmpDir.remove();
 }
 
 //----------------------------------------------//
-//------------- 圧縮/解凍 の 作業 --------------//
+//------------- ???k/?? ?? ??? --------------//
 //----------------------------------------------//
 
 bool CNoahApp::is_writable_dir( const kiPath& path )
 {
-	// 要するに、CDROM/DVDROM を切りたい。
-	// FDD, PacketWriteなDisk を切るのはあきらめる。
+	// ?v?????ACDROM/DVDROM ???????B
+	// FDD, PacketWrite??Disk ?????????????B
 
-	// RAMDISK, REMOTE, FIXED, UNKNOWN なディスクは書き込み可能と見なす
+	// RAMDISK, REMOTE, FIXED, UNKNOWN ??f?B?X?N??????????\??????
 	UINT drv = path.getDriveType();
 	if( drv==DRIVE_REMOVABLE || drv==DRIVE_CDROM )
 	{
-		// 素Win95では使えない関数なのでDynamicLoad
+		// ?fWin95???g????????????DynamicLoad
 		typedef BOOL (WINAPI*pGDFSE)( LPCTSTR, PULARGE_INTEGER, PULARGE_INTEGER, PULARGE_INTEGER );
 		pGDFSE pGetDiskFreeSpaceEx
 			= (pGDFSE) ::GetProcAddress( ::GetModuleHandle("kernel32.dll"), "GetDiskFreeSpaceExA" );
 		if( pGetDiskFreeSpaceEx )
 		{
-			// 空き容量が0なら、書き込み不可とみなす
+			// ??e???0???A????????s??????
 			ULARGE_INTEGER fs, dummy;
 			pGetDiskFreeSpaceEx( path, &dummy, &dummy, &fs );
 			if( fs.QuadPart == 0 )
@@ -109,14 +110,14 @@ void CNoahApp::do_files( const cCharArray& files,
 						 bool  basicaly_ignore )
 {
 	struct local {
-		~local() {kiSUtil::switchCurDirToExeDir(); } // ディレクトリロックしないように
+		~local() {kiSUtil::switchCurDirToExeDir(); } // ?f?B???N?g?????b?N?????????
 	} _;
 
-	//-- Archiver Manager にファイル名リストを記憶する
+	//-- Archiver Manager ??t?@?C???????X?g???L??????
 	if( 0 == m_arcMan.set_files( files ) )
 		return;
 
-	//-- 作業用変数
+	//-- ???p???
 	enum { unknown, melt, compress }
 			whattodo = unknown;
 	bool	ctrl_mlt = keyPushed( VK_CONTROL );
@@ -126,7 +127,7 @@ void CNoahApp::do_files( const cCharArray& files,
 	kiPath  destdir;
 	kiStr tmp(300);
 
-	//-- ( もしあれば )コマンドラインオプションを解釈
+	//-- ( ????????? )?R?}???h???C???I?v?V??????????
 	if( opts )
 		for( unsigned int i=0; i!=opts->len(); i++ )
 			switch( (*opts)[i][1] )
@@ -155,23 +156,23 @@ void CNoahApp::do_files( const cCharArray& files,
 						break;}
 			}
 
-	//-- Load-INI ( 動作モード設定 )
+	//-- Load-INI ( ?????[?h??? )
 	m_cnfMan.load( Mode );
 
-	//-- 圧縮解凍のどちらを行うか決定する。流れは以下の通り。
+	//-- ???k?????????s??????????B???????????B
 	//
-	// ・コマンドラインで、圧縮と指定されてれば無条件で圧縮へ
+	// ?E?R?}???h???C????A???k??w?????????????????k??
 	//
-	// ・そうでなければ、まずNoahの動作モード取得
-	// 　m0:圧縮専用  m1:圧縮優先  m2:解凍優先  m3:解凍専用
-	// 　　コマンドラインで解凍と指定されていれば m3。
-	// 　　指定が無ければ、m_cnfMan から読み込み。
+	// ?E???????????A???Noah??????[?h???
+	// ?@m0:???k??p  m1:???k?D??  m2:??D??  m3:???p
+	// ?@?@?R?}???h???C??????w????????? m3?B
+	// ?@?@?w??b???????Am_cnfMan ?????????B
 	//
-	// ・m0 か、'm1でしかもファイルが複数' の時は無条件で圧縮へ
+	// ?Em0 ???A'm1????????t?@?C????????' ??????????????k??
 	//
-	// ・そうでなければ、解凍ルーチンを割り当ててみる。
-	// 　この際、m3 以外のときは一個でも割り当て失敗したらエラー＞圧縮へ
-	// 　m3 でも、一個も割り当てられなければエラー。＞処理終了
+	// ?E???????????A????[?`??????????????B
+	// ?@?????Am3 ??O???????????????????s??????G???[?????k??
+	// ?@m3 ????A??????????????????G???[?B???????I??
 
 	if( whattodo != compress )
 	{
@@ -183,7 +184,7 @@ void CNoahApp::do_files( const cCharArray& files,
 			whattodo = compress;
 		else
 		{
-			//-- 解凍ルーチン割り当ててみる
+			//-- ????[?`????????????
 			bool suc = m_arcMan.map_melters( mode );
 			if( suc )
 				whattodo = melt;
@@ -193,7 +194,7 @@ void CNoahApp::do_files( const cCharArray& files,
 					whattodo = compress;
 				else
 				{
-					//-- 解凍専用モードだけど解凍不可！！
+					//-- ???p???[?h???????s??I?I
 					msgBox( tmp.loadRsrc(IDS_M_ERROR) );
 					return;
 				}
@@ -203,11 +204,11 @@ void CNoahApp::do_files( const cCharArray& files,
 
 	if( whattodo == melt )
 	{
-		//-- 解凍設定は既にm_cnfMan.init()でロードされている…
+		//-- ????????m_cnfMan.init()????[?h????????c
 
 		if( destdir.len()==0 )
 		{
-			//-- 解凍先ディレクトリ取得
+			//-- ???f?B???N?g?????
 			if( m_cnfMan.mdirsm() )
 				if( is_writable_dir(m_arcMan.get_basepath()) )
 					destdir = m_arcMan.get_basepath();
@@ -215,7 +216,7 @@ void CNoahApp::do_files( const cCharArray& files,
 				destdir = m_cnfMan.mdir();
 		}
 
-		//-- 解凍
+		//-- ??
 		if( ctrl_mlt )	m_arcMan.do_listing( destdir );
 		else {
 			ProcessNumLimitZone zone( mycnf().multiboot_limit(), "LimitterForNoahAtKmonosNet" );
@@ -224,12 +225,12 @@ void CNoahApp::do_files( const cCharArray& files,
 	}
 	else
 	{
-		//-- Load-INI( 圧縮設定 )
+		//-- Load-INI( ???k??? )
 		m_cnfMan.load( Compress );
 
 		if( destdir.len()==0 )
 		{
-			//-- 圧縮先ディレクトリ取得
+			//-- ???k??f?B???N?g?????
 			if( m_cnfMan.cdirsm() )
 				if( is_writable_dir(m_arcMan.get_basepath()) )
 					destdir = m_arcMan.get_basepath();
@@ -240,49 +241,89 @@ void CNoahApp::do_files( const cCharArray& files,
 		else if( !method ) method = "";
 		if( !method  ) method  = m_cnfMan.cmhd();
 
-		//-- 圧縮用ルーチンを割り当て
+		//-- ???k?p???[?`???????????
 		if( !m_arcMan.map_compressor( cmptype, method, ctrl_cmp ) )
 		{
-			//-- 圧縮不能な形式！！
+			//-- ???k?s?\??`???I?I
 			msgBox( tmp.loadRsrc(IDS_C_ERROR) );
 			return;
 		}
 
-		//-- 圧縮
+		//-- ???k
 		ProcessNumLimitZone zone( mycnf().multiboot_limit(), "LimitterForNoahAtKmonosNet" );
 		m_arcMan.do_compressing( destdir, alt );
 	}
 }
 
 //----------------------------------------------//
-//----------------- その他雑用 -----------------//
+//----------------- ??????G?p -----------------//
 //----------------------------------------------//
+
+static bool build_open_folder_cmd( char* out, size_t outChars, const char* tmpl, const char* dirPath )
+{
+	if( !out || outChars==0 || !dirPath )
+		return false;
+	out[0] = '\0';
+	if( !tmpl || !*tmpl )
+		tmpl = "explorer.exe \"%s\"";
+	const char* pct = NULL;
+	for( const char* p = tmpl; *p; p++ )
+	{
+		if( *p != '%' )
+			continue;
+		if( p[1] == '%' )
+		{
+			p++;
+			continue;
+		}
+		if( p[1] == 's' )
+		{
+			if( pct )
+				return false;
+			pct = p;
+			p++;
+			continue;
+		}
+		return false;
+	}
+	if( pct )
+	{
+		const ptrdiff_t pre = pct - tmpl;
+		const char* post = pct + 2;
+		_snprintf_s( out, outChars, _TRUNCATE, "%.*s%s%s", (int)pre, tmpl, dirPath, post );
+	}
+	else
+		_snprintf_s( out, outChars, _TRUNCATE, "%s \"%s\"", tmpl, dirPath );
+	return true;
+}
 
 // from= 0:normal 1:melt 2:compress
 void CNoahApp::open_folder( const kiPath& path, int from )
 {
-	if( from==1 || from==2 ) //-- Shellに更新通知
+	if( from==1 || from==2 ) //-- Shell??X?V??m
 		::SHChangeNotify( SHCNE_UPDATEDIR, SHCNF_PATH, (const void*)(const char*)path, NULL );
 
-	//-- デスクトップだったら開かない
+	//-- ?f?X?N?g?b?v????????J?????
 	kiPath dir(path), tmp(kiPath::Dsk,false);
 	dir.beBackSlash(false), dir.beShortPath(), tmp.beShortPath();
 
 	if( !tmp.isSame( dir ) )
 	{
-		//-- Load-INI( フォルダ開き設定 )
+		//-- Load-INI( ?t?H???_?J????? )
 		m_cnfMan.load( OpenDir );
 		if( (from==1 && !m_cnfMan.modir())
 		 || (from==2 && !m_cnfMan.codir()) )
 			return;
 		
 		char cmdline[1000];
-		wsprintf( cmdline, m_cnfMan.openby(), (const char*)dir );
+		const char* tmpl = m_cnfMan.openby();
+		if( !build_open_folder_cmd( cmdline, sizeof cmdline, tmpl, (const char*)dir ) )
+			build_open_folder_cmd( cmdline, sizeof cmdline, "explorer.exe \"%s\"", (const char*)dir );
 		::WinExec( cmdline, SW_SHOWDEFAULT );
 	}
 }
 
-// 全システム中で一意なテンポラリフォルダを作って返す
+// ?S?V?X?e?????????e???|?????t?H???_?????????
 void CNoahApp::get_tempdir( kiPath& tmp )
 {
 	char buf[MAX_PATH];

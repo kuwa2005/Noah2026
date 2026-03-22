@@ -1,0 +1,23 @@
+# Visual Studio / MSBuild
+.vs/
+*.suo
+*.user
+*.userosscache
+*.VC.db
+*.VC.VC.opendb
+ipch/
+
+# ビルド出力
+Debug/
+Release/
+x64/
+obj/
+*.exe
+*.pdb
+*.ilk
+*.iobj
+*.ipdb
+*.log
+*.tlog
+*.recipe
+*.lastbuildstate

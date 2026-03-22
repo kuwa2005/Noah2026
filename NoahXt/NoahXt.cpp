@@ -14,8 +14,9 @@
 #include <windowsx.h>
 #include <shlobj.h>
 #include <lmaccess.h>
+#include <string.h>
 
-// カレントディレクトリを安全なところに移してLoadLibrary
+// ?J?????g?f?B???N?g???????S???????????LoadLibrary
 static HMODULE safepathLoadLibrary(LPCTSTR lpFileName)
 {
 	char original_cur[MAX_PATH], sys[MAX_PATH];
@@ -44,7 +45,7 @@ void WINAPI SaveASEx( const char* ext, bool x );
 
 
 //-------------------------------------------------------
-//-- グローバル変数 -------------------------------------
+//-- ?O???[?o????? -------------------------------------
 //-------------------------------------------------------
 
 
@@ -71,7 +72,7 @@ static const char* ProgID_NoahXt = "NoahXt";
 
 
 //--------------------------------------------------------
-//-- シェルエクステンション・本体 --------------------------
+//-- ?V?F???G?N?X?e???V?????E?{?? --------------------------
 //--------------------------------------------------------
 
 
@@ -108,26 +109,26 @@ public:
 
 #define CMPR_CMD_E ("Com&press Here")
 #define EXTR_CMD_E ("E&xtract Here")
-#define CMPR_CMD   (g_bJpn ? "ここに圧縮(&P)" : CMPR_CMD_E)
-#define EXTR_CMD   (g_bJpn ? "ここに解凍(&X)" : EXTR_CMD_E)
-#define CMPR_HLP   (g_bJpn ? "ファイルをNoahで圧縮します。" : "Compress These Files By Noah")
-#define EXTR_HLP   (g_bJpn ? "ファイルをNoahで展開" : "Extract Files By Noah")
+#define CMPR_CMD   (g_bJpn ? "????????k(&P)" : CMPR_CMD_E)
+#define EXTR_CMD   (g_bJpn ? "???????(&X)" : EXTR_CMD_E)
+#define CMPR_HLP   (g_bJpn ? "?t?@?C????Noah????k??????B" : "Compress These Files By Noah")
+#define EXTR_HLP   (g_bJpn ? "?t?@?C????Noah??W?J" : "Extract Files By Noah")
 
-	// 右クリックメニューへ追加
+	// ?E?N???b?N???j???[????
 	STDMETHODIMP QueryContextMenu( HMENU h, UINT i, UINT id, UINT idLast, UINT flag )
 		{
 			if( (flag&0x000F)!=CMF_NORMAL && !(flag&CMF_VERBSONLY) && !(flag&CMF_EXPLORE) )
 				return NOERROR;
 
-			// レジストリから設定読み込み
-			// できれば、ここでm_bEXTに関しては拡張子判定を行いたいところ…(^^;
+			// ???W?X?g?????????????
+			// ??????A??????m_bEXT???????g???q??????s???????????c(^^;
 			LoadSE( &m_bCMP, &m_bEXT );
 
 			if( m_bCMP ) ::InsertMenu( h, i++, MF_STRING|MF_BYPOSITION, id++, CMPR_CMD );
 			if( m_bEXT ) ::InsertMenu( h, i++, MF_STRING|MF_BYPOSITION, id++, EXTR_CMD );
 			return MAKE_HRESULT( SEVERITY_SUCCESS, 0, id );
 		}
-	// コマンド実行
+	// ?R?}???h???s
 	STDMETHODIMP InvokeCommand( LPCMINVOKECOMMANDINFO lpcmi )
 		{
 			if( 0==HIWORD(lpcmi->lpVerb) )
@@ -138,7 +139,7 @@ public:
 				}
 			return E_INVALIDARG;
 		}
-	// ヘルプ文字列など
+	// ?w???v????????
 	STDMETHODIMP GetCommandString( UINT cmd, UINT flag, UINT*, LPSTR pszName, UINT cchMax )
 		{
 			cmd = filter_cmd( cmd );
@@ -152,7 +153,7 @@ public:
 			return NOERROR;
 		}
 private:
-	// コマンドIDを compress=0, melt=1, else=2 にフィルタリング
+	// ?R?}???hID?? compress=0, melt=1, else=2 ??t?B???^?????O
 	UINT filter_cmd( UINT i )
 		{
 			if( m_bCMP )if( m_bEXT )return (i<=1 ? i : 2);
@@ -160,7 +161,7 @@ private:
 			else		if( m_bEXT )return (i==0 ? 1 : 2);
 						else		return 2;
 		}
-	// Noah.exeへ渡す処理 "Compress Here" or "Extract Here"
+	// Noah.exe??n?????? "Compress Here" or "Extract Here"
 	STDMETHODIMP operation( const char* opt )
 		{
 			STGMEDIUM md;
@@ -171,27 +172,34 @@ private:
 				const int num = ::DragQueryFile( hDrop, 0xffffffff, NULL, 0 );
 				if( num )
 				{
-					// main command
-					char* cmd = new char[10 + MAX_PATH * (num+2)];
-					::lstrcpy( cmd, g_szNoah );
-					::lstrcat( cmd, " " );
-					::lstrcat( cmd, opt );
-					// destdir
-					::lstrcat( cmd, " \"-D" );
-					::lstrcat( cmd, m_szDir );
-					::lstrcat( cmd, "\"" );
-					// filelist
-					char str[MAX_PATH];
-					for( int i=0; i!=num; i++ )
+					size_t cap = (size_t)lstrlen(g_szNoah) + (size_t)lstrlen(opt) + (size_t)lstrlen(m_szDir) + 64u;
+					for( int j=0; j!=num; j++ )
 					{
-						::DragQueryFile( hDrop, i, str, sizeof(str) );
-						::lstrcat( cmd, " \"" );
-						::lstrcat( cmd, str );
-						::lstrcat( cmd, "\"" );
+						char sz[MAX_PATH];
+						::DragQueryFile( hDrop, j, sz, sizeof(sz) );
+						cap += (size_t)lstrlen(sz) + 4u;
 					}
-					// call 'Noah'
-					::WinExec( cmd, SW_SHOWDEFAULT );
-					delete [] cmd;
+					char* cmd = new char[cap];
+					if( cmd )
+					{
+						errno_t e = ::strcpy_s( cmd, cap, g_szNoah );
+						e |= ::strcat_s( cmd, cap, " " );
+						e |= ::strcat_s( cmd, cap, opt );
+						e |= ::strcat_s( cmd, cap, " \"-D" );
+						e |= ::strcat_s( cmd, cap, m_szDir );
+						e |= ::strcat_s( cmd, cap, "\"" );
+						char str[MAX_PATH];
+						for( int i=0; i!=num; i++ )
+						{
+							::DragQueryFile( hDrop, i, str, sizeof(str) );
+							e |= ::strcat_s( cmd, cap, " \"" );
+							e |= ::strcat_s( cmd, cap, str );
+							e |= ::strcat_s( cmd, cap, "\"" );
+						}
+						if( e==0 )
+							::WinExec( cmd, SW_SHOWDEFAULT );
+						delete [] cmd;
+					}
 				}
 				::ReleaseStgMedium( &md );
 			}
@@ -204,7 +212,7 @@ private:
 	bool         m_bCMP, m_bEXT;
 };
 
-//-- クラス工場 -------------------------------------------
+//-- ?N???X?H?? -------------------------------------------
 
 class noahXtClassFactory : public IClassFactory
 {
@@ -238,7 +246,7 @@ private:
 	ULONG m_cRef;
 };
 
-//-- システム向けAPI ---------------------------------------
+//-- ?V?X?e??????API ---------------------------------------
 
 extern "C" int APIENTRY
 DllMain( HINSTANCE inst, DWORD why, LPVOID reserved )
@@ -328,26 +336,26 @@ public:
 			return;
 		}
 
-		// NT系では、サブキーのあるキーは消せないので再帰的に。
-		// しかもEnum中にDeleteはできない上にvector<string>等も
-		// 封印しているためわけのわからんコードになってます。
+		// NT?n???A?T?u?L?[?????L?[????????????A?I??B
+		// ??????Enum????Delete??????????vector<string>????
+		// ?????????????????R?[?h?????????B
 
-		// 消したいキーを開く
+		// ?????????L?[???J??
 		HKEY k2;
 		while( ERROR_SUCCESS == ::RegOpenKeyEx( k,n,0,KEY_ENUMERATE_SUB_KEYS|KEY_SET_VALUE,&k2 ) )
 		{
-			// １個目の子キー名を取得
+			// ?P????q?L?[?????擾
 			char buf[200];
 			DWORD bs = sizeof(buf);
 			if( ERROR_SUCCESS == ::RegEnumKeyEx( k2,0,buf,&bs,NULL,NULL,NULL,NULL ) )
 			{
-				// あればそれを削除
+				// ???????????
 				delSubKey( k2, buf );
 				::RegCloseKey( k2 );
 			}
 			else
 			{
-				// なければ、消したいキーを消せる
+				// ??????A?????????L?[????????
 				::RegCloseKey( k2 );
 				::RegDeleteKey( k, n );
 				return;
@@ -361,7 +369,7 @@ private:
 
 
 //--------------------------------------------------------
-//-- Noahの設定用APIなど ----------------------------------
+//-- Noah????pAPI??? ----------------------------------
 //--------------------------------------------------------
 
 
@@ -370,19 +378,19 @@ char g_szAsCmd[MAX_PATH+10];
 char g_szAsIcon[MAX_PATH+10];
 
 
-// 管理者権限判別
+// ????????????
 //-- IsAdmin() : very very thanks! to ardry, the author of 'meltice'.
 
 bool IsAdmin()
 {
 	bool isadmin=false;
 
-	//-- 9x対策のため、動的にDLLロード
+	//-- 9x???????A???I??DLL???[?h
 	HINSTANCE hInstDll = safepathLoadLibrary( "NetAPI32" );
 	if( !hInstDll )
 		return false;
 
-	//-- NetUserGetLocalGroupes API 取得
+	//-- NetUserGetLocalGroupes API ?擾
 	typedef NET_API_STATUS (NET_API_FUNCTION *PNETUSRGETLCLGRP)(LPCWSTR,wchar_t *,DWORD,DWORD,VOID*,DWORD,LPDWORD,LPDWORD);
 	PNETUSRGETLCLGRP pNetUserGetLocalGroups = (PNETUSRGETLCLGRP)::GetProcAddress(hInstDll, "NetUserGetLocalGroups");
 	if( !pNetUserGetLocalGroups )
@@ -391,14 +399,14 @@ bool IsAdmin()
 		return false;
 	}
 
-	//-- ユーザー名取得
+	//-- ???[?U?[???擾
 	char    userA[256];
 	wchar_t userW[256];
 	DWORD   tmp = 256;
 	::GetUserName( userA, &tmp );
 	::MultiByteToWideChar( CP_ACP, 0, userA, -1, userW, 255 );
 
-	//-- 本筋
+	//-- ?{??
 	LOCALGROUP_USERS_INFO_0* pBuf;
 	DWORD entry;
 	char buf[256];
@@ -416,24 +424,24 @@ bool IsAdmin()
 			}
 		}
 
-		//-- メモリ解放
+		//-- ?????????
 		typedef NET_API_STATUS (NET_API_FUNCTION * PNETAPIBUFFERFREE)(void*);
 		PNETAPIBUFFERFREE pNetApiBufferFree = (PNETAPIBUFFERFREE)::GetProcAddress( hInstDll, "NetApiBufferFree" );
 		if( pNetApiBufferFree )
 			pNetApiBufferFree( pBuf );
 	}
 
-	//-- DLL解放
+	//-- DLL???
 	::FreeLibrary( hInstDll );
 	return isadmin;
 }
 
-// レジストリへの書き込み権限判定…うまくいかないらしい
+// ???W?X?g???????????????????c????????????????
 //
 //bool IsRegWritable()
 //{
 //	HKEY key;
-//	if( ERROR_SUCCESS != // 適当なクラスキーへの書き込み権限を調べる
+//	if( ERROR_SUCCESS != // ?K????N???X?L?[?????????????????
 //		::RegOpenKeyEx( HKEY_CLASSES_ROOT, "ttffile", 0, KEY_WRITE, &key ) )
 //		return false;
 //	::RegCloseKey( key );
@@ -442,8 +450,8 @@ bool IsAdmin()
 
 //** bool Init()
 //**
-//**   設定画面用に起動するときは最初にコレを呼ぶこと。
-//**   false が返ってきたときは、諸事情により利用できないことを示す。
+//**   ?????p??N??????????????R??????????B
+//**   false ???????????????A??????????p????????????????B
 bool WINAPI Init()
 {
 	::wsprintf( g_szAsIcon, "%s,%%d", g_szDLL );
@@ -459,8 +467,8 @@ bool WINAPI Init()
 
 //** void LoadSE( bool* a, bool* x )
 //**
-//**   シェルエクステンションの設定を返す。
-//**   a: [ここに圧縮]がONか否か  x: [ここに解凍]がONか否か
+//**   ?V?F???G?N?X?e???V????????????B
+//**   a: [????????k]??ON?????  x: [???????]??ON?????
 void WINAPI LoadSE( bool* a, bool* x )
 {
 	*a = kiRegKey::exist( HKEY_CLASSES_ROOT, "CLSID\\{953AFAE9-C2A9-4674-9811-D7E281B001E1}\\CShl" );
@@ -469,8 +477,8 @@ void WINAPI LoadSE( bool* a, bool* x )
 
 //** void SaveSE( bool a, bool x )
 //**
-//**   シェルエクステンションの設定を保存する。
-//**   a: [ここに圧縮]がONか否か  x: [ここに解凍]がONか否か
+//**   ?V?F???G?N?X?e???V???????????????B
+//**   a: [????????k]??ON?????  x: [???????]??ON?????
 void WINAPI SaveSE( bool a, bool x )
 {
 	kiRegKey key, key2;
@@ -485,7 +493,7 @@ void WINAPI SaveSE( bool a, bool x )
 	}
 	else
 	{
-		// CLSID 登録
+		// CLSID ?o?^
 		key.create( HKEY_CLASSES_ROOT, "CLSID\\{953AFAE9-C2A9-4674-9811-D7E281B001E1}", KEY_WRITE );
 			key.set( "", ProgID_NoahXt );
 			key2.create( key, "InprocServer32", KEY_WRITE );
@@ -496,14 +504,14 @@ void WINAPI SaveSE( bool a, bool x )
 		if(x)key2.create( key, "MShl", KEY_READ );
 		else kiRegKey::delSubKey( key, "MShl" );
 
-		// Folder の DnD Handler として登録
+		// Folder ?? DnD Handler ?????o?^
 		key.create( HKEY_CLASSES_ROOT, "Folder\\shellex\\DragDropHandlers\\NoahXt", KEY_WRITE );
 			key.set( "", "{953AFAE9-C2A9-4674-9811-D7E281B001E1}" );
-		// Drive の DnD Handler として登録
+		// Drive ?? DnD Handler ?????o?^
 		key.create( HKEY_CLASSES_ROOT, "Drive\\shellex\\DragDropHandlers\\NoahXt", KEY_WRITE );
 			key.set( "", "{953AFAE9-C2A9-4674-9811-D7E281B001E1}" );
 
-		// NT系用に、Approved List に書いておく
+		// NT?n?p??AApproved List ??????????
 		if( g_isNT && key.open( HKEY_CLASSES_ROOT, "Software\\Microsoft\\Windows\\CurrentVersion\\Shell Extensions\\Approved", KEY_SET_VALUE ) )
 			key.set( "{953AFAE9-C2A9-4674-9811-D7E281B001E1}", ProgID_NoahXt );
 	}
@@ -532,7 +540,7 @@ static const char* ext_list[] = {
 
 //** void LoadAS( bool asso[] )
 //**
-//**   標準の関連付けの設定を返す。
+//**   ?W?????A?t??????????B
 //**   LZH=0, ZIP, CAB, RAR, TAR, YZ1, GCA, ARJ, BGA, ACE, CPT, JAK
 void WINAPI LoadAS( bool asso[] )
 {
@@ -542,14 +550,14 @@ void WINAPI LoadAS( bool asso[] )
 
 //** void SaveAS( bool asso[] )
 //**
-//**   標準の関連付けの設定を保存。
+//**   ?W?????A?t??????????B
 //**   LZH=0, ZIP, CAB, RAR, TAR, YZ1, GCA, ARJ, BGA, ACE, CPT, JAK
 void WINAPI SaveAS( bool asso[] )
 {
 	for( int i=A_BEGIN; i<A_END; i++ )
 	{
 		int icon_type = i;
-		if( i==CPT ) icon_type = OTH; // v3.195: cptは、"その他"アイコン
+		if( i==CPT ) icon_type = OTH; // v3.195: cpt??A"?????"?A?C?R??
 
 		if( asso[i] )
 			asso_on( ext_list[i], icon_type );
@@ -560,7 +568,7 @@ void WINAPI SaveAS( bool asso[] )
 
 //** void LoadASEx( const char* ext, bool* x )
 //**
-//**   指定した拡張子がNoahに関連付けられているかどうかを返す
+//**   ?w?????g???q??Noah???A?t??????????????????
 void WINAPI LoadASEx( const char* ext, bool* x )
 {
 	*x = is_asso_on( ext );
@@ -568,11 +576,11 @@ void WINAPI LoadASEx( const char* ext, bool* x )
 
 //** void SaveASEx( const char* ext, bool x )
 //**
-//**   指定した拡張子をNoahに関連付けたり解除したり
+//**   ?w?????g???q??Noah???A?t???????????????
 void WINAPI SaveASEx( const char* ext, bool x )
 {
-	int icon_type = OTH;                         // デフォルトは"その他"アイコン
-	if( 0==lstrcmp(ext,"7z") ) icon_type = SvnZ; // v3.195: 7zに限り、7z専用アイコン
+	int icon_type = OTH;                         // ?f?t?H???g??"?????"?A?C?R??
+	if( 0==lstrcmp(ext,"7z") ) icon_type = SvnZ; // v3.195: 7z?????A7z??p?A?C?R??
 
 	if( x )	asso_on(  ext, icon_type );
 	else	asso_off( ext, icon_type );
@@ -582,10 +590,10 @@ void WINAPI SaveASEx( const char* ext, bool x )
 
 
 #define step(_x)    (_x+=::lstrlen(_x)+1)
-#define MltCmd      (g_bJpn ? "解凍(&E)" : "&Extract")
-#define JntCmd      (g_bJpn ? "結合(&E)" : "Combin&e")
-#define MltTyp      (g_bJpn ? "書庫(%s)" : "Archive(%s)")
-#define JntTyp      (g_bJpn ? "分割ファイル(%s)" : "RipperedFile(%s)")
+#define MltCmd      (g_bJpn ? "??(&E)" : "&Extract")
+#define JntCmd      (g_bJpn ? "????(&E)" : "Combin&e")
+#define MltTyp      (g_bJpn ? "????(%s)" : "Archive(%s)")
+#define JntTyp      (g_bJpn ? "?????t?@?C??(%s)" : "RipperedFile(%s)")
 #define CmdName(_n) (_n==JAK ? JntCmd : MltCmd)
 #define TypName(_n) (_n==JAK ? JntTyp : MltTyp)
 
@@ -635,7 +643,7 @@ void asso_on( const char* ext, const int no )
 
 	if( key.create( HKEY_CLASSES_ROOT, asc, KEY_WRITE ) )
 	{
-		//-- "HKCR/NoahXt.lzh" = "書庫( lzh )"
+		//-- "HKCR/NoahXt.lzh" = "????( lzh )"
 		::wsprintf( str, TypName(no), ext );
 		key.set( "", str );
 		key.del( "EditFlags" );
@@ -653,7 +661,7 @@ void asso_on( const char* ext, const int no )
 			key2.set( "", "Open" );
 			if( key3.create( key2, "Open", KEY_WRITE ) )
 			{
-				//--  "HKCR/NoahXt.lzh/Shell/Open" = "解凍(&X)"
+				//--  "HKCR/NoahXt.lzh/Shell/Open" = "??(&X)"
 				key3.set( "", CmdName(no) );
 				if( key4.create( key3, "Command", KEY_WRITE ) )
 					//--  "HKCR/NoahXt.lzh/Shell/Open/Command" = "...Noah.exe -x "%1""

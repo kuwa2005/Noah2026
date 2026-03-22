@@ -2,6 +2,7 @@
 #include "stdafx.h"
 #include "NoahApp.h"
 #include "SubDlg.h"
+#include <stdio.h>
 
 int CArcViewDlg::st_nLife;
 
@@ -15,29 +16,29 @@ BOOL CArcViewDlg::onInit()
 	kiListView ctrl( this, IDC_FILELIST );
 	__int64 filesize_sum = 0;
 
-	//-- ダイアログ一個生成の印
+	//-- ?_?C?A???O?????????
 	hello();
 	m_bSmallFirst[0] = m_bSmallFirst[1] = m_bSmallFirst[2] =
 	m_bSmallFirst[3] = m_bSmallFirst[4] = m_bSmallFirst[5] = true;
 
-	//-- 真ん中に＆前に
+	//-- ?^?????O??
 	setCenter( hwnd(), app()->mainhwnd() );
 	setFront( hwnd() );
 
-	//-- アイコン
+	//-- ?A?C?R??
 	path = m_fname.basedir, path += m_fname.sname;
 	hImS = (HIMAGELIST)::SHGetFileInfo( path, 0, &sfi, sizeof(sfi), SHGFI_SYSICONINDEX | SHGFI_ICON | SHGFI_SMALLICON );
 	hImL = (HIMAGELIST)::SHGetFileInfo( path, 0, &lfi, sizeof(lfi), SHGFI_SYSICONINDEX | SHGFI_ICON | SHGFI_LARGEICON );
 	sendMsg( WM_SETICON, ICON_BIG,   (LPARAM)lfi.hIcon );
 	sendMsg( WM_SETICON, ICON_SMALL, (LPARAM)sfi.hIcon );
 
-	//-- タイトル
+	//-- ?^?C?g??
 	sendMsg( WM_SETTEXT, 0, (LPARAM)kiPath(m_fname.lname).name() );
 
-	//-- 解凍先
+	//-- ???
 	sendMsgToItem( IDC_DDIR, WM_SETTEXT, 0, (LPARAM)(const char*)m_ddir );
 
-	//-- リスト
+	//-- ???X?g
 	if( !m_pArc->list( m_fname, m_files ) || m_files.len()==0 )
 	{
 		m_bAble = false;
@@ -59,7 +60,7 @@ BOOL CArcViewDlg::onInit()
 		FILETIME ftm;
 		SYSTEMTIME stm;
 
-		//-- アイテム
+		//-- ?A?C?e??
 		for( unsigned int i=0,k=0; i!=m_files.len(); i++ )
 			if( m_files[i].isfile )
 			{
@@ -70,17 +71,17 @@ BOOL CArcViewDlg::onInit()
 #define			time (m_files[i].inf.wTime)
 				path = m_files[i].inf.szFileName;
 
-				// ファイル名
+				// ?t?@?C????
 				ctrl.insertItem( k, path.name(),
 					(LPARAM)(&m_files[i]), kiSUtil::getSysIcon(path.ext()) );
 
-				// サイズ
+				// ?T?C?Y
 				if( usiz == 0xffffffff )
 					ctrl.setSubItem( k, 1, "????" );
 				else
 					ctrl.setSubItem( k, 1, str.setInt( usiz,true ) );
 
-				// 時間
+				// ????
 				if( ::DosDateTimeToFileTime( date, time, &ftm )
 				 && ::FileTimeToSystemTime( &ftm, &stm ) )
 				{
@@ -94,16 +95,16 @@ BOOL CArcViewDlg::onInit()
 					ctrl.setSubItem( k, 2, str );
 				}
 
-				// 圧縮率
+				// ???k??
 				filesize_sum += usiz;
 				if( usiz==0 )		ctrl.setSubItem( k, 3, "100%" );
 				else if( csiz==0 )	ctrl.setSubItem( k, 3, "????" );
 				else				ctrl.setSubItem( k, 3, str.setInt( (int)(((__int64)csiz)*100/usiz) )+='%' );
 
-				// メソッド
+				// ???\?b?h
 				ctrl.setSubItem( k, 4, method );
 
-				// パス
+				// ?p?X
 				path.beDirOnly();
 				ctrl.setSubItem( k, 5, path );
 
@@ -116,7 +117,7 @@ BOOL CArcViewDlg::onInit()
 #undef			time
 			}
 
-		//-- ドラッグ＆ドロップフォーマット登録
+		//-- ?h???b?O???h???b?v?t?H?[?}?b?g?o?^
 		FORMATETC fmt;
 		fmt.cfFormat = CF_HDROP;
 		fmt.ptd      = NULL;
@@ -126,16 +127,21 @@ BOOL CArcViewDlg::onInit()
 		addFormat( fmt );
 	}
 
-	//-- 情報 --
+	//-- ??? --
 	char tmp[255];
 	kiStr full_filename = m_fname.basedir + m_fname.lname;
 	__int64 filesize_arc = kiFile::getSize64(full_filename);
 	if( filesize_sum==0 ) filesize_sum = 1;
-	wsprintf( tmp, kiStr().loadRsrc(IDS_ARCVIEW_MSG),
+	const char* atn = (const char*)m_pArc->arctype_name(full_filename);
+	char safeArcType[160];
+	size_t si = 0;
+	for( ; *atn && si + 1 < sizeof safeArcType; atn++ )
+		safeArcType[si++] = (*atn == '%') ? '_' : *atn;
+	safeArcType[si] = '\0';
+	_snprintf_s( tmp, sizeof tmp, _TRUNCATE, kiStr().loadRsrc(IDS_ARCVIEW_MSG),
 		m_files.len(),
 		(int)(filesize_arc*100 / filesize_sum),
-		(const char*)m_pArc->arctype_name(full_filename)
-	);
+		safeArcType );
 	sendMsgToItem( IDC_STATUSBAR, WM_SETTEXT, 0, (long)tmp );
 
 	if( !m_bAble )
@@ -153,7 +159,7 @@ bool CArcViewDlg::onOK()
 	setdir();
 	m_pArc->melt( m_fname, m_ddir );
 	myapp().open_folder( m_ddir, 1 );
-	kiSUtil::switchCurDirToExeDir(); // 念のため
+	kiSUtil::switchCurDirToExeDir(); // ?O?????
 	return onCancel();
 }
 
@@ -244,7 +250,7 @@ BOOL CALLBACK CArcViewDlg::proc( UINT msg, WPARAM wp, LPARAM lp )
 {
 	switch( msg )
 	{
-	//-- メインウインドウ指定 ---------------------
+	//-- ???C???E?C???h?E?w?? ---------------------
 	case WM_ACTIVATE:
 		if( LOWORD(wp)==WA_ACTIVE || LOWORD(wp)==WA_CLICKACTIVE )
 		{
@@ -253,7 +259,7 @@ BOOL CALLBACK CArcViewDlg::proc( UINT msg, WPARAM wp, LPARAM lp )
 		}
 		break;
 
-	//-- リサイズ関連の処理 ---------------------
+	//-- ???T?C?Y??A????? ---------------------
 	case WM_GETMINMAXINFO:
 		{
 			RECT self,child;
@@ -311,7 +317,7 @@ BOOL CALLBACK CArcViewDlg::proc( UINT msg, WPARAM wp, LPARAM lp )
 	case WM_COMMAND:
 		switch( LOWORD(wp) )
 		{
-		case IDC_SELECTINV: // 選択反転
+		case IDC_SELECTINV: // ?I??]
 			{
 				LVITEM item;
 				item.mask = LVIF_STATE;
@@ -326,11 +332,11 @@ BOOL CALLBACK CArcViewDlg::proc( UINT msg, WPARAM wp, LPARAM lp )
 			}
 			return TRUE;
 
-		case IDC_REF: // 解凍先設定
+		case IDC_REF: // ?????
 			kiSUtil::getFolderDlgOfEditBox( item(IDC_DDIR), hwnd(), kiStr().loadRsrc(IDS_CHOOSEDIR) );
 			return TRUE;
 
-		case IDC_MELTEACH: // 一部解凍
+		case IDC_MELTEACH: // ????
 			if( setSelection() )
 			{
 				setdir();
@@ -340,15 +346,15 @@ BOOL CALLBACK CArcViewDlg::proc( UINT msg, WPARAM wp, LPARAM lp )
 				else if( result != 0x8020 )
 				{
 					char str[255];
-					wsprintf( str, "%s\nError No: [%x]",
+					_snprintf_s( str, sizeof str, _TRUNCATE, "%s\nError No: [%x]",
 						(const char*)kiStr().loadRsrc( IDS_M_ERROR ), result );
 					app()->msgBox( str );
 				}
-				kiSUtil::switchCurDirToExeDir(); // 念のため
+				kiSUtil::switchCurDirToExeDir(); // ?O?????
 			}
 			return TRUE;
 
-		case IDC_SHOW: // 表示
+		case IDC_SHOW: // ?\??
 			if( setSelection() )
 			{
 				int assocCnt = hlp_cnt_check();
@@ -369,7 +375,7 @@ BOOL CALLBACK CArcViewDlg::proc( UINT msg, WPARAM wp, LPARAM lp )
 							::ShellExecute( hwnd(), NULL, tmp, NULL, m_tdir, SW_SHOWDEFAULT );
 						}
 				}
-				kiSUtil::switchCurDirToExeDir(); // 念のため
+				kiSUtil::switchCurDirToExeDir(); // ?O?????
 			}
 			return TRUE;
 		}
@@ -379,7 +385,7 @@ BOOL CALLBACK CArcViewDlg::proc( UINT msg, WPARAM wp, LPARAM lp )
 
 int CArcViewDlg::hlp_cnt_check()
 {
-	// 一個目の選択済みファイルが .hlp か否か
+	// ?????I?????t?@?C???? .hlp ?????
 	for( unsigned i=0; i!=m_files.len(); i++ )
 		if( m_files[i].selected )
 			break;
@@ -389,12 +395,12 @@ int CArcViewDlg::hlp_cnt_check()
 	if( 0!=ki_strcmpi( "hlp", m_files[i].inf.szFileName+x ) )
 		return -1;
 
-	// .cnt のファイル名
+	// .cnt ??t?@?C????
 	char cntpath[FNAME_MAX32];
 	ki_strcpy( cntpath, m_files[i].inf.szFileName );
 	cntpath[x]='c', cntpath[x+1]='n', cntpath[x+2]='t';
 
-	// .cntも一時的に選択する
+	// .cnt?????I??I??????
 	for( i=0; i!=m_files.len(); i++ )
 		if( 0==ki_strcmpi( cntpath, m_files[i].inf.szFileName ) )
 		{
@@ -460,7 +466,7 @@ void CArcViewDlg::DoSort( int col )
 
 void CArcViewDlg::GenerateDirMenu( HMENU m, int& id, StrArray* sx, const kiPath& pth )
 {
-	// フォルダ内リストアップ
+	// ?t?H???_?????X?g?A?b?v
 	kiFindFile ff;
 	ff.begin( kiPath(pth)+="*" );
 	for( WIN32_FIND_DATA fd; ff.next(&fd); )
@@ -473,7 +479,7 @@ void CArcViewDlg::GenerateDirMenu( HMENU m, int& id, StrArray* sx, const kiPath&
 
 			if( fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY )
 			{
-				// 再帰的に
+				// ??A?I??
 				mi.fMask = MIIM_SUBMENU | 0x00000040;// (MIIM_STRING)
 				mi.hSubMenu = ::CreatePopupMenu();
 				GenerateDirMenu( mi.hSubMenu, id, sx,
@@ -498,23 +504,23 @@ void CArcViewDlg::GenerateDirMenu( HMENU m, int& id, StrArray* sx, const kiPath&
 
 void CArcViewDlg::DoRMenu()
 {
-	// メニュー作成
+	// ???j???[??
 	HMENU m = ::CreatePopupMenu();
 	POINT pt; ::GetCursorPos( &pt );
 	const int IDSTART = 128;
 
-	// フォルダの中身をリストアップしつつメニューに追加
+	// ?t?H???_????g?????X?g?A?b?v???????j???[????
 	int id = IDSTART;
 	StrArray lst;
 	GenerateDirMenu( m, id, &lst, kiPath(CSIDL_SENDTO) );
 
-	// メニュー表示
+	// ???j???[?\??
 	id = ::TrackPopupMenu( m,
 		TPM_LEFTALIGN|TPM_TOPALIGN|TPM_RETURNCMD|TPM_NONOTIFY,
 		pt.x, pt.y, 0, hwnd(), NULL );
 	::DestroyMenu( m );
 
-	// 結果処理
+	// ???????
 	if( id != 0 )
 	{
 		kiStr cmd;
