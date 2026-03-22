@@ -143,10 +143,11 @@ int CArcB2e::exec_script( const char* scr, scr_mode mode )
 	rvm->setPtr( this, mode );
 
 	//-- ŽÀs
-	char* script = new char[ki_strlen(scr)+8];
-	ki_strcpy( script, "(exec " );
-	ki_strcat( script, scr );
-	ki_strcat( script, ")" );
+	const size_t cap = (size_t)ki_strlen(scr)+8;
+	char* script = new char[cap];
+	ki_strcpy( script, cap, "(exec " );
+	ki_strcat( script, cap, scr );
+	ki_strcat( script, cap, ")" );
 	rvm->eval( script );
 	delete [] script;
 

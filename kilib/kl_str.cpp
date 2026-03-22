@@ -5,7 +5,7 @@
 #include "kilib.h"
 
 
-//------------------------ 2byte文字処理用 ----------------------//
+//------------------------ 2byte?????????p ----------------------//
 
 
 char kiStr::st_lb[256];
@@ -18,7 +18,7 @@ void kiStr::init()
 }
 
 
-//-------------------------- コピー系色々 ------------------------//
+//-------------------------- ?R?s?[?n?F?X ------------------------//
 
 
 kiStr::kiStr( int start_size )
@@ -30,6 +30,8 @@ kiStr::kiStr( const char* s, int min_size )
 {
 	int slen = ki_strlen(s) + 1;
 	m_ALen = ( slen < min_size ) ? min_size : slen;
+	if( m_ALen < slen )
+		m_ALen = slen;
 	ki_memcpy( m_pBuf=new char[m_ALen], s, slen );
 }
 
@@ -49,6 +51,8 @@ kiStr& kiStr::operator = ( const char* s )
 {
 	int slen = ki_strlen( s ) + 1;
 	int  len = this->len();
+	if( slen < 1 )
+		return *this;
 
 	if( m_ALen < slen || s <= m_pBuf+len || m_pBuf <= s+slen )
 	{
@@ -66,6 +70,8 @@ kiStr& kiStr::operator += ( const char* s )
 {
 	int slen = ki_strlen( s ) + 1;
 	int  len = this->len();
+	if( slen < 1 || len > INT_MAX - slen - 1 )
+		return *this;
 
 	if( m_ALen < len+slen+1
 	 || ( s <= m_pBuf && m_pBuf <= s+len )
@@ -129,7 +135,7 @@ kiStr& kiStr::setInt( int n, bool cm )
 	return (*this);
 }
 
-//-------------------------- 文字列処理全般 ------------------------//
+//-------------------------- ????????S?? ------------------------//
 
 
 kiStr::~kiStr()
@@ -158,7 +164,7 @@ int kiStr::len() const
 }
 
 
-//-------------------------- ユーティリティー ------------------------//
+//-------------------------- ???[?e?B???e?B?[ ------------------------//
 
 
 kiStr& kiStr::removeTrailWS()
@@ -307,7 +313,7 @@ void kiPath::remove()
 void kiPath::getBody( kiStr& str ) const
 {
 	char *p=const_cast<char*>(name()),*x,c;
-	for( x=(*p=='.'?p+1:p); *x; x=next(x) ) // 先頭の.は拡張子と見なさない
+	for( x=(*p=='.'?p+1:p); *x; x=next(x) ) // ????.??g???q?????????
 		if( *x=='.' )
 			break;
 	c=*x, *x='\0';
@@ -317,9 +323,9 @@ void kiPath::getBody( kiStr& str ) const
 
 void kiPath::getBody_all( kiStr& str ) const
 {
-// 最後の拡張子だけ削る版
+// ????g???q????????
 	char *p=const_cast<char*>(name()),*x=NULL, *n, c;
-	for( n=(*p=='.'?p+1:p); *n; n=next(n) ) // 先頭の.は拡張子と見なさない
+	for( n=(*p=='.'?p+1:p); *n; n=next(n) ) // ????.??g???q?????????
 		if( *n=='.' )
 			x = n;
 	if( !x )x = n;
@@ -333,7 +339,7 @@ void kiPath::getBody_all( kiStr& str ) const
 const char* kiPath::ext( const char* str )
 {
 	const char *ans = NULL, *p = name(str);
-	if( *p == '.' ) ++p; // 先頭の.は拡張子と見なさない
+	if( *p == '.' ) ++p; // ????.??g???q?????????
 	for( ; *p; p=next(p) )
 		if( *p=='.' )
 			ans = p;
@@ -343,7 +349,7 @@ const char* kiPath::ext( const char* str )
 const char* kiPath::ext_all( const char* str )
 {
 	const char* p = name(str);
-	if( *p == '.' ) ++p; // 先頭の.は拡張子と見なさない
+	if( *p == '.' ) ++p; // ????.??g???q?????????
 	for( ; *p; p=next(p) )
 		if( *p=='.' )
 			return (p+1);

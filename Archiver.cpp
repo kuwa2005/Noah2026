@@ -10,7 +10,7 @@
 CArcModule::CArcModule( const char* name, bool us )
 	: m_dll(NULL)
 {
-	// SearchPathの前にカレントディレクトリをnoah.exeと同じ場所へ
+	// SearchPath??O??J?????g?f?B???N?g????noah.exe?????????
 	char prev_cur[MAX_PATH];
 	::GetCurrentDirectory(MAX_PATH, prev_cur);
 	kiSUtil::switchCurDirToExeDir();
@@ -20,12 +20,12 @@ CArcModule::CArcModule( const char* name, bool us )
 		const char* xt=kiPath::ext(name);
 		if( 0!=ki_strcmpi("dll",xt) )
 		{
-			// EXEの場合
+			// EXE???
 			m_type = us ? EXEUS : EXE;
 		}
 		else
 		{
-			// DLLの場合
+			// DLL???
 			m_dll = new kiArcDLLRaw(name);
 			m_type = DLL;
 			if(name<=xt-8&&xt[-6]=='G'&&xt[-5]=='C'&&xt[-4]=='A' )
@@ -36,13 +36,13 @@ CArcModule::CArcModule( const char* name, bool us )
 	}
 	else
 	{
-		// ファイルが無いか、シェルのコマンドの場合
-		// バッファオーバーフローの危険…(^^;
+		// ?t?@?C???????????A?V?F????R?}???h???
+		// ?o?b?t?@?I?[?o?[?t???[????c(^^;
 		ki_strcpy( m_name, name );
 		m_type = SHLCMD;
 	}
 
-	// カレントを戻す
+	// ?J?????g????
 	::SetCurrentDirectory(prev_cur);
 }
 
@@ -55,19 +55,19 @@ int CArcModule::cmd( const char* cmd, bool mini )
 {
 	if( m_dll )
 	{
-		// アーカイバDLLモードなら簡単に終了
+		// ?A?[?J?C?oDLL???[?h????P??I??
 		char buf[1024];
 		return m_dll->command( NULL, cmd, buf, sizeof(buf) );
 	}
 
-	// NTかどうかのチェック等
+	// NT?????????`?F?b?N??
 	kiPath tmpdir;
 	static const bool isNT =
 		(app()->osver().dwPlatformId==VER_PLATFORM_WIN32_NT);
 	static const char* const closeShell =
 		(isNT ? "cmd.exe /c " : "command.com /c ");
 
-	// コマンド文字列作成
+	// ?R?}???h???????
 	kiVar theCmd( m_name );
 	theCmd.quote();
 	theCmd += ' ';
@@ -75,19 +75,19 @@ int CArcModule::cmd( const char* cmd, bool mini )
 
 	if( m_type==SHLCMD )
 	{
-		// シェルコマンドの場合
+		// ?V?F???R?}???h???
 		theCmd = closeShell + theCmd;
 	}
 	else if( m_type==EXEUS )
 	{
-		// USモードの場合
+		// US???[?h???
 		if( isNT )
 		{
 			::SetEnvironmentVariable( "NOAHCMD", theCmd );
 			theCmd = "%NOAHCMD%";
 		}
 
-		// 切替バッチファイル生成
+		// ???o?b?`?t?@?C??????
 		myapp().get_tempdir(tmpdir);
 		kiPath batname(tmpdir);
 		batname += "ncmd.bat";
@@ -101,7 +101,7 @@ int CArcModule::cmd( const char* cmd, bool mini )
 		theCmd += batname;
 	}
 
-	// プロセス開始
+	// ?v???Z?X?J?n
 	PROCESS_INFORMATION pi;
 	STARTUPINFO si={sizeof(STARTUPINFO)};
 	si.dwFlags    =STARTF_USESHOWWINDOW;
@@ -111,7 +111,7 @@ int CArcModule::cmd( const char* cmd, bool mini )
 		NULL,NULL, &si,&pi ) )
 		return 0xffff;
 
-	// 終了待機
+	// ?I????@
 	::CloseHandle( pi.hThread );
 	while( WAIT_OBJECT_0 != ::WaitForSingleObject( pi.hProcess, 500 ) )
 		kiWindow::msg();
@@ -119,7 +119,7 @@ int CArcModule::cmd( const char* cmd, bool mini )
 	::GetExitCodeProcess( pi.hProcess, (DWORD*)&ex );
 	::CloseHandle( pi.hProcess );
 
-	// 後始末
+	// ??n??
 	if( m_type==EXEUS )
 		tmpdir.remove();
 	return ex;
@@ -127,19 +127,20 @@ int CArcModule::cmd( const char* cmd, bool mini )
 
 void CArcModule::ver( kiStr& str )
 {
-	// バージョン情報を整形して表示
+	// ?o?[?W????????`????\??
 	char *verstr="----", buf[200];
 	if( m_dll )
 	{
 		if( WORD ver=m_dll->getVer() )
 		{
 			WORD sub=m_dll->getVerSub();
-			::wsprintf( verstr=buf, "%d.%02d%c", ver/100, ver%100, (sub<100)?0:sub/100+'a'-1 );
+			::sprintf_s( buf, sizeof(buf), "%d.%02d%c", ver/100, ver%100, (sub<100)?0:sub/100+'a'-1 );
+			verstr = buf;
 		}
 	}
 	else if( m_type != NOTEXIST )
 	{
-		// 可能ならリソースからの取得を試みる
+		// ??\????\?[?X??????????????
 		if( CArchiver::GetVersionInfoStr( m_name, buf, sizeof(buf) ) )
 			verstr = buf;
 		else
@@ -147,7 +148,7 @@ void CArcModule::ver( kiStr& str )
 	}
 
 	char ans[300];
-	::wsprintf( ans, "%-12s %s", kiPath::name(m_name), verstr );
+	::sprintf_s( ans, sizeof(ans), "%-12s %s", kiPath::name(m_name), verstr );
 	str = ans;
 }
 
@@ -221,27 +222,27 @@ bool CArcModule::lst_exe( const char* lstcmd, aflArray& files,
 {
 	files.forcelen(0);
 
-	// 作業変数
+	// ?????
 	const int BLLEN = ki_strlen(BL);
 	const int ELLEN = ki_strlen(EL);
 	int /*ct=0,*/ step=BSL;
 
-	// EXE以外のものではダメ
+	// EXE??O???????_??
 	if( m_type!=EXE && m_type!=EXEUS )
 		return false;
 
-	// コマンド文字列作成
+	// ?R?}???h???????
 	kiVar theCmd( m_name );
 	theCmd.quote();
 	theCmd += ' ';
 	theCmd += lstcmd;
 
-	// パイプ作成（両方とも継承ON。DupHanするの面倒いので…(^^;）
+	// ?p?C?v???i????????p??ON?BDupHan??????|?????c(^^;?j
 	HANDLE rp, wp;
 	SECURITY_ATTRIBUTES sa = {sizeof(SECURITY_ATTRIBUTES),NULL,TRUE};
 	::CreatePipe( &rp, &wp, &sa, 4096 );
 
-	// プロセス開始
+	// ?v???Z?X?J?n
 	PROCESS_INFORMATION pi;
 	STARTUPINFO si = {sizeof(STARTUPINFO)};
 	si.dwFlags     = STARTF_USESHOWWINDOW|STARTF_USESTDHANDLES;
@@ -253,7 +254,7 @@ bool CArcModule::lst_exe( const char* lstcmd, aflArray& files,
 			NULL, NULL, &si,&pi );
 	::CloseHandle( wp );
 
-	// 失敗したらパイプを閉じて即終了
+	// ???s??????p?C?v????????I??
 	if( !ok )
 	{
 		::CloseHandle( rp );
@@ -261,54 +262,60 @@ bool CArcModule::lst_exe( const char* lstcmd, aflArray& files,
 	}
 	::CloseHandle( pi.hThread );
 
-	// 解析作業etc(バッファのサイズはパイプのサイズの倍以上でなくてはならない)
+	// ?????etc(?o?b?t?@??T?C?Y??p?C?v??T?C?Y??{?????????????)
 	char buf[8192], *end=buf;
 	for( bool endpr=false; !endpr; )
 	{
-		// 終了待機
+		// ?I????@
 		endpr = (WAIT_OBJECT_0==::WaitForSingleObject(pi.hProcess,500));
 		kiWindow::msg();
 
-		// パイプから読みとり
+		// ?p?C?v????????
 		DWORD red;
 		::PeekNamedPipe( rp, NULL, 0, NULL, &red, NULL );
 		if( red==0 )
 			continue;
-		::ReadFile( rp, end, buf+sizeof(buf)-end, &red, NULL );
+		if( end < buf || end > buf + sizeof(buf) )
+			end = buf;
+		const size_t room = (size_t)( ( buf + sizeof(buf) ) - end );
+		if( room == 0 )
+			continue;
+		DWORD toRead = room > (size_t)0x7fffffff ? 0x7fffffff : (DWORD)room;
+		::ReadFile( rp, end, toRead, &red, NULL );
 		end += red;
 
-		// 行に分解
+		// ?s?????
 		char *lss=buf;
 		for( char *ls, *le=buf; le<end; ++le )
 		{
-			// 行末を探す
+			// ?s????T??
 			for( lss=ls=le; le<end; ++le )
 				if( *le=='\n' )
 					break;
 			if( le==end )
 				break;
 
-			// 先頭行スキップ処理
+			// ???s?X?L?b?v????
 			if( *BL )
 			{
 				if( BLLEN<=le-ls && ki_memcmp(BL,ls,BLLEN) )
 					BL = "";
 			}
-			// 行ステップ処理
+			// ?s?X?e?b?v????
 			else if( --step<=0 )
 			{
 				step = SL;
 
-				// 終端行処理
+				// ?I?[?s????
 				if( ELLEN==0 )
 					{ if( le-ls<=1 ) break; }
 				else if( ELLEN<=le-ls && ki_memcmp(EL,ls,ELLEN) )
 					break;
 
-				// 文字スキップ処理
+				// ?????X?L?b?v????
 				if( dx>=0 )
 					ls += dx;
-				// 引数ブロックスキップ処理
+				// ?????u???b?N?X?L?b?v????
 				else
 				{
 					for( ;ls<le;++ls )
@@ -324,7 +331,7 @@ bool CArcModule::lst_exe( const char* lstcmd, aflArray& files,
 								break;
 					}
 				}
-				// ファイル名コピー
+				// ?t?@?C?????R?s?[
 				if( ls<le )
 				{
 					arcfile af; ki_memzero(&af, sizeof(af));
@@ -366,21 +373,21 @@ bool CArcModule::lst_exe( const char* lstcmd, aflArray& files,
 				}
 			}
 		}
-		// バッファシフト
+		// ?o?b?t?@?V?t?g
 		if( lss != buf )
 			ki_memmov( buf, lss, end-lss ), end=buf+(end-lss);
 		else if( end==buf+sizeof(buf) )
 			end = buf;
 	}
 
-	// お終い
+	// ???I??
 	::CloseHandle( pi.hProcess );
 	::CloseHandle( rp );
 	return true;
 }
 
 /*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*/
-// バージョン情報リソース取得
+// ?o?[?W???????\?[?X???
 
 bool CArchiver::GetVersionInfoStr( char* name, char* buf, size_t cbBuf )
 {
@@ -400,13 +407,13 @@ bool CArchiver::GetVersionInfoStr( char* name, char* buf, size_t cbBuf )
 		WORD* tr = NULL;
 		UINT cbTr = 0;
 
-		// 最初に見つけた言語とコードページで情報取得
+		// ????????????????R?[?h?y?[?W??????
 		if( ::VerQueryValue( vbuf,
 			"\\VarFileInfo\\Translation", (void**)&tr, &cbTr )
 		 && cbTr >= 4 )
 		{
 			char blockname[500]="";
-			::wsprintf( blockname,
+			::sprintf_s( blockname, sizeof(blockname),
 				"\\StringFileInfo\\%04x%04x\\ProductVersion",
 				tr[0], tr[1] );
 
@@ -432,10 +439,10 @@ bool CArchiver::GetVersionInfoStr( char* name, char* buf, size_t cbBuf )
 			{
 				ki_memcpy( &vffi, fi, sizeof(vffi) );
 				if( vffi.dwFileVersionLS >= 0x10000 )
-					::wsprintf( buf, "%d.%d.%d", vffi.dwFileVersionMS>>16,
+					::sprintf_s( buf, cbBuf, "%d.%d.%d", vffi.dwFileVersionMS>>16,
 						vffi.dwFileVersionMS&0xffff, vffi.dwFileVersionLS>>16 );
 				else
-					::wsprintf( buf, "%d.%d", vffi.dwFileVersionMS>>16,
+					::sprintf_s( buf, cbBuf, "%d.%d", vffi.dwFileVersionMS>>16,
 						vffi.dwFileVersionMS&0xffff );
 				got = true;
 			}

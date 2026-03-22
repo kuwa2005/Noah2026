@@ -15,17 +15,38 @@
 #include <shlobj.h>
 #include <lmaccess.h>
 #include <string.h>
+#include <stdio.h>
 
-// ?J?????g?f?B???N?g???????S???????????LoadLibrary
+// ?V?X?e?? DLL ?i?w?????t?@?C???????j?F?J?????g?f?B???N?g????`?f?B?A?N?g?D
 static HMODULE safepathLoadLibrary(LPCTSTR lpFileName)
 {
-	char original_cur[MAX_PATH], sys[MAX_PATH];
-	::GetCurrentDirectory(MAX_PATH, original_cur);
-	::GetSystemDirectory(sys, MAX_PATH);
-	::SetCurrentDirectory(sys);
-	HMODULE han = ::LoadLibrary(lpFileName);
-	::SetCurrentDirectory(original_cur);
-	return han;
+	if( !lpFileName || !*lpFileName )
+		return NULL;
+	for( LPCTSTR q = lpFileName; *q; q = CharNext(q) )
+		if( *q=='\\' || *q=='/' || *q==':' )
+			return NULL;
+	char sys[MAX_PATH];
+	if( !::GetSystemDirectoryA( sys, MAX_PATH ) )
+		return NULL;
+	char full[MAX_PATH + 4];
+	if( ::sprintf_s( full, sizeof(full), "%s\\%s", sys, lpFileName ) < 0 )
+		return NULL;
+	return ::LoadLibraryA( full );
+}
+
+// ?A?\?V?G?[?V?????p?F?e?Z?O?????g?????i?o?C?g?P??j
+static bool NoahXtAssocExtSegmentsOk( const char* ext, size_t maxSeg )
+{
+	if( !ext )
+		return false;
+	for( const char* p = ext; *p; )
+	{
+		size_t n = (size_t)::lstrlen( p );
+		if( n==0 || n > maxSeg )
+			return false;
+		p += n + 1;
+	}
+	return true;
 }
 
 //-------------------------------------------------------
@@ -147,8 +168,14 @@ public:
 				return E_FAIL;
 			switch( flag )
 			{
-			case GCS_HELPTEXT:	::lstrcpyn( pszName, cmd==0 ? CMPR_HLP : EXTR_HLP, cchMax ); break;
-			case GCS_VERB:		::lstrcpyn( pszName, cmd==0 ? CMPR_CMD_E : EXTR_CMD_E, cchMax ); break;
+			case GCS_HELPTEXT:
+				if( cchMax==0 || !pszName ) return E_FAIL;
+				(void)::strcpy_s( pszName, (size_t)cchMax, cmd==0 ? CMPR_HLP : EXTR_HLP );
+				break;
+			case GCS_VERB:
+				if( cchMax==0 || !pszName ) return E_FAIL;
+				(void)::strcpy_s( pszName, (size_t)cchMax, cmd==0 ? CMPR_CMD_E : EXTR_CMD_E );
+				break;
 			}
 			return NOERROR;
 		}
@@ -197,7 +224,17 @@ private:
 							e |= ::strcat_s( cmd, cap, "\"" );
 						}
 						if( e==0 )
-							::WinExec( cmd, SW_SHOWDEFAULT );
+						{
+							STARTUPINFOA si = { sizeof(si) };
+							si.dwFlags = STARTF_USESHOWWINDOW;
+							si.wShowWindow = SW_SHOWDEFAULT;
+							PROCESS_INFORMATION pi = {};
+							if( ::CreateProcessA( NULL, cmd, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi ) )
+							{
+								::CloseHandle( pi.hThread );
+								::CloseHandle( pi.hProcess );
+							}
+						}
 						delete [] cmd;
 					}
 				}
@@ -253,13 +290,21 @@ DllMain( HINSTANCE inst, DWORD why, LPVOID reserved )
 {
 	if( why==DLL_PROCESS_ATTACH )
 	{
-		::GetModuleFileName( inst, g_szDLL, sizeof(g_szDLL) );
-		::lstrcpy( g_szNoah, g_szDLL );
-		for( char *p=g_szNoah,*y=g_szNoah-1; *p; p=::CharNext(p) )
+		::GetModuleFileNameA( inst, g_szDLL, sizeof(g_szDLL) );
+		if( 0 != ::strcpy_s( g_szNoah, sizeof(g_szNoah), g_szDLL ) )
+			g_szNoah[0] = '\0';
+		char* y = NULL;
+		for( char *p=g_szNoah; *p; p=::CharNext(p) )
 			if( *p=='\\' )
 				y=p;
-		::lstrcpy( y+1, "Noah.exe" );
-		::GetShortPathName( g_szNoah, g_szNoah, MAX_PATH );
+		if( y )
+		{
+			const char exe[] = "Noah.exe";
+			const size_t dirPrefix = (size_t)( ( y + 1 ) - g_szNoah );
+			if( dirPrefix + sizeof(exe) <= sizeof(g_szNoah)
+			 && 0 == ::strcpy_s( y + 1, sizeof(g_szNoah) - dirPrefix, exe ) )
+				(void)::GetShortPathNameA( g_szNoah, g_szNoah, MAX_PATH );
+		}
 
 		OSVERSIONINFO osVer;
 		osVer.dwOSVersionInfoSize = sizeof(osVer);
@@ -344,7 +389,7 @@ public:
 		HKEY k2;
 		while( ERROR_SUCCESS == ::RegOpenKeyEx( k,n,0,KEY_ENUMERATE_SUB_KEYS|KEY_SET_VALUE,&k2 ) )
 		{
-			// ?P????q?L?[?????ï
+			// ?P????q?L?[???????
 			char buf[200];
 			DWORD bs = sizeof(buf);
 			if( ERROR_SUCCESS == ::RegEnumKeyEx( k2,0,buf,&bs,NULL,NULL,NULL,NULL ) )
@@ -390,7 +435,7 @@ bool IsAdmin()
 	if( !hInstDll )
 		return false;
 
-	//-- NetUserGetLocalGroupes API ?ï
+	//-- NetUserGetLocalGroupes API ???
 	typedef NET_API_STATUS (NET_API_FUNCTION *PNETUSRGETLCLGRP)(LPCWSTR,wchar_t *,DWORD,DWORD,VOID*,DWORD,LPDWORD,LPDWORD);
 	PNETUSRGETLCLGRP pNetUserGetLocalGroups = (PNETUSRGETLCLGRP)::GetProcAddress(hInstDll, "NetUserGetLocalGroups");
 	if( !pNetUserGetLocalGroups )
@@ -399,7 +444,7 @@ bool IsAdmin()
 		return false;
 	}
 
-	//-- ???[?U?[???ï
+	//-- ???[?U?[?????
 	char    userA[256];
 	wchar_t userW[256];
 	DWORD   tmp = 256;
@@ -454,8 +499,8 @@ bool IsAdmin()
 //**   false ???????????????A??????????p????????????????B
 bool WINAPI Init()
 {
-	::wsprintf( g_szAsIcon, "%s,%%d", g_szDLL );
-	::wsprintf( g_szAsCmd , "%s -x \"%%1\"", g_szNoah );
+	(void)::sprintf_s( g_szAsIcon, sizeof(g_szAsIcon), "%s,%%d", g_szDLL );
+	(void)::sprintf_s( g_szAsCmd, sizeof(g_szAsCmd), "%s -x \"%%1\"", g_szNoah );
 
 	if( g_isNT )
 		if( !IsAdmin() )
@@ -624,16 +669,22 @@ void asso_on( const char* ext, const int no )
 {
 	if( is_asso_on( ext ) )
 		return;
+	if( !NoahXtAssocExtSegmentsOk( ext, 64u ) )
+		return;
 	g_bChanged = true;
 
 	kiRegKey key, key2, key3, key4;
-	char str[500],asc[20]="NoahXt.";
-	::lstrcpy( asc+7, ext );
+	char str[500];
+	char asc[128] = "NoahXt.";
+	if( 0 != ::strcpy_s( asc+7, sizeof(asc)-7, ext ) )
+		return;
 
 	for( const char* p=ext; *p; step(p) )
 	{
 		//-- "HKCR/.lzh" = "NoahXt.lzh", "HKCR/.lzs" = "NoahXt.lzh" ...
-		str[0]='.', ::lstrcpy( str+1, p );
+		str[0] = '.';
+		if( 0 != ::strcpy_s( str+1, sizeof(str)-1, p ) )
+			continue;
 		if( key.create( HKEY_CLASSES_ROOT, str, KEY_WRITE ) )
 		{
 			key.set( "", asc );
@@ -644,14 +695,14 @@ void asso_on( const char* ext, const int no )
 	if( key.create( HKEY_CLASSES_ROOT, asc, KEY_WRITE ) )
 	{
 		//-- "HKCR/NoahXt.lzh" = "????( lzh )"
-		::wsprintf( str, TypName(no), ext );
+		(void)::sprintf_s( str, sizeof(str), TypName(no), ext );
 		key.set( "", str );
 		key.del( "EditFlags" );
 
 		if( key2.create( key, "DefaultIcon", KEY_WRITE ) )
 		{
 			//-- "HKCR/NoahXt.lzh/DefaultIcon" = "...Noah.exe, 1"
-			::wsprintf( str, g_szAsIcon, no );
+			(void)::sprintf_s( str, sizeof(str), g_szAsIcon, no );
 			key2.set( "", str );
 		}
 
@@ -675,17 +726,22 @@ void asso_off( const char* ext, const int no )
 {
 	if( !is_asso_on( ext ) )
 		return;
+	if( !NoahXtAssocExtSegmentsOk( ext, 64u ) )
+		return;
 	g_bChanged = true;
 
 	//-- delete "HKCR/NoahXt.lzh"
-	char str[20] = "NoahXt.";
-	::lstrcpy( str+7, ext );
+	char str[128] = "NoahXt.";
+	if( 0 != ::strcpy_s( str+7, sizeof(str)-7, ext ) )
+		return;
 	kiRegKey::delSubKey( HKEY_CLASSES_ROOT, str );
 
 	//-- delete "HKCR/.lzh" "HKCR/.lzs" ...
 	for( const char* p=ext; *p; step(p) )
 	{
-		str[0]='.', ::lstrcpy( str+1, p );
+		str[0] = '.';
+		if( 0 != ::strcpy_s( str+1, sizeof(str)-1, p ) )
+			continue;
 		kiRegKey::delSubKey( HKEY_CLASSES_ROOT, str );
 	}
 
@@ -699,17 +755,21 @@ void asso_off( const char* ext, const int no )
 
 bool is_asso_on( const char* ext )
 {
+	if( !NoahXtAssocExtSegmentsOk( ext, 64u ) )
+		return false;
 	//-- "HKCR/.lzh" exists ?
-	char str[20] = ".";
-	::lstrcpy( str+1, ext );
+	char str[128] = ".";
+	if( 0 != ::strcpy_s( str+1, sizeof(str)-1, ext ) )
+		return false;
 	kiRegKey key;
 	if( !key.open( HKEY_CLASSES_ROOT, str, KEY_READ ) )
 		return false;
-	if( !key.get( "", str, 20 ) )
+	if( !key.get( "", str, sizeof(str) ) )
 		return false;
 
 	//-- the value of "HKCR/.lzh" is "NoahXt.lzh" ?
-	char asc[20] = "NoahXt.";
-	::lstrcpy( asc+7, ext );
+	char asc[128] = "NoahXt.";
+	if( 0 != ::strcpy_s( asc+7, sizeof(asc)-7, ext ) )
+		return false;
 	return ( 0==::lstrcmp( str, asc ) );
 }

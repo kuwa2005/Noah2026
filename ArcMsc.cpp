@@ -5,13 +5,13 @@
 
 bool CArcMsc::header( kiFile& fp, unsigned long* siz, char* ext )
 {
-	// 読み出す
+	// ???o??
 	unsigned char p[14];
 	if( 14!=fp.read(p,14) )
 		return false;
 
-	// ヘッダ構造：SZDD芋'3A [ext3rd] [orisiz(dword)]
-	static const unsigned char head[9]={ 0x53,0x5A,0x44,0x44,0x88,0xF0,0x27,0x33,0x41 };//="SZDD芋'3A";
+	// ?w?b?_?\???FSZDD??'3A [ext3rd] [orisiz(dword)]
+	static const unsigned char head[9]={ 0x53,0x5A,0x44,0x44,0x88,0xF0,0x27,0x33,0x41 };//="SZDD??'3A";
 
 	for( int i=0; i!=9; i++ )
 		if( p[i]!=head[i] )
@@ -24,16 +24,16 @@ bool CArcMsc::header( kiFile& fp, unsigned long* siz, char* ext )
 	if( siz )
 		*siz=x;
 
-	// 原理的に、16倍という圧縮率は出ない
+	// ?????I??A16?{????????k????o???
 	return (x <= fp.getSize()*16);
 }
 
-void CArcMsc::filename( char* oname, const char* ol, char ext )
+void CArcMsc::filename( char* oname, size_t onameCap, const char* ol, char ext )
 {
-	// コピー
-	ki_strcpy( oname, ol );
+	// ?R?s?[
+	ki_strcpy( oname, onameCap, ol );
 
-	// 最後が '_' なら消しておく。
+	// ???I '_' ????????????B
 	bool bIs_=false;
 	for( char* p=oname; *p; p=kiStr::next(p) ) 
 		bIs_ = (*p=='_');
@@ -43,13 +43,13 @@ void CArcMsc::filename( char* oname, const char* ol, char ext )
 
 	if( ext )
 	{
-		// 拡張子復元
+		// ?g???q????
 		*p++ = ext;
 		*p   = '\0';
 	}
 	else
 	{
-		// 拡張子自動補完
+		// ?g???q??????
 		const char* x = kiPath::ext(oname);
 		if( ki_strlen(x)==2 )
 		{
@@ -112,11 +112,11 @@ bool CArcMsc::v_list( const arcname& aname, aflArray& files )
 	if( !fp.open( fname ) || !header( fp, &x.inf.dwOriginalSize, &ext ) )
 		return false;
 	ki_strcpy( x.inf.szMode, "-msc-" );
-	filename( x.inf.szFileName, aname.lname, ext );
+	filename( x.inf.szFileName, sizeof x.inf.szFileName, aname.lname, ext );
 	x.inf.dwCompressedSize = fp.getSize();
 	x.isfile = true;
 
-	// TODO: 日時をどうする？
+	// TODO: ?????????????H
 
 	files.add( x );
 	return true;
@@ -129,25 +129,25 @@ int CArcMsc::v_melt( const arcname& aname, const kiPath& ddir, const aflArray* f
 	kiPath oname(ddir);
 	char tmp[MAX_PATH];
 
-	// ヘッダ読み込み
+	// ?w?b?_??????
 	char ext;
 	unsigned long alllen;
 	if( !fp.open( fname ) || !header(fp,&alllen,&ext) )
 		return 0xffff;
 	fp.close();
-	filename( tmp, aname.lname, ext );
+	filename( tmp, sizeof tmp, aname.lname, ext );
 	oname += tmp;
 
-	// 書庫・出力先を開く
+	// ????E?o?????J??
 	OFSTRUCT of;
 	of.cBytes = sizeof(of);
 	int FROM = ::LZOpenFile( const_cast<char*>((const char*)fname),&of,OF_READ );
 	int TO   = ::LZOpenFile( const_cast<char*>((const char*)oname),&of,OF_WRITE|OF_CREATE );
 	if( FROM<0 || TO<0 )
 		return 0xffff;
-	// 解凍
+	// ??
 	bool ans = (0<=::LZCopy( FROM,TO ));
-	// 終了
+	// ?I??
 	::LZClose( TO );
 	::LZClose( FROM );
 	return ans?0:0xffff;
@@ -157,12 +157,12 @@ int CArcMsc::v_compress( const kiPath& base, const wfdArray& files, const kiPath
 {
 	::SetCurrentDirectory( base );
 
-	// 元ファイルを開く
+	// ???t?@?C?????J??
 	kiFile in;
 	if( !in.open( files[0].cFileName ) )
 		return 0xffff;
 
-	// ヘッダ情報・圧縮先ファイル名
+	// ?w?b?_???E???k??t?@?C????
 	char h_Ext3 = '\0';
 	unsigned long h_Len = in.getSize();
 
@@ -174,26 +174,26 @@ int CArcMsc::v_compress( const kiPath& base, const wfdArray& files, const kiPath
 		h_Ext3=*last;
 	*last = '_', *(last+1) = '\0';
 
-	// 圧縮先開く
+	// ???k??J??
 	::SetCurrentDirectory( ddir );
 
-	// 圧縮先を開く
+	// ???k????J??
 	kiFile out;
 	if( !out.open( aname, false ) )
 		return 0xffff;
 
-	// タイムスタンプコピー
+	// ?^?C???X?^???v?R?s?[
 	FILETIME ct, at, mt;
 	::GetFileTime(in.getHandle(), &ct, &at, &mt);
 	::SetFileTime(out.getHandle(), &ct, &at, &mt);
 
-	// ヘッダ書き込み
+	// ?w?b?_????????
 	unsigned char head[14]={ 0x53,0x5A,0x44,0x44,0x88,0xF0,0x27,0x33,0x41,(unsigned char)h_Ext3,
 							 (unsigned char)(h_Len&0xff),(unsigned char)((h_Len>>8)&0xff),
 							 (unsigned char)((h_Len>>16)&0xff),(unsigned char)((h_Len>>24)&0xff) };
 	out.write( head, 14 );
 
-	// 圧縮作業
+	// ???k???
 	CArcProgressDlg dlg( h_Len, true );
 	dlg.change( files[0].cFileName );
 	if( !do_lzss( in, out, dlg ) )
@@ -209,8 +209,8 @@ int CArcMsc::v_compress( const kiPath& base, const wfdArray& files, const kiPath
 //-- 12bit LZSS -----------------------------------------------//
 
 
-#define N 4096 // slide窓のサイズ 2^12 bytes
-#define F 18   // 最長一致長 2^(16-12)+2 bytes
+#define N 4096 // slide????T?C?Y 2^12 bytes
+#define F 18   // ?????v?? 2^(16-12)+2 bytes
 
 static unsigned char window[N+F-1];
 static int dad[N+1], lson[N+1], rson[N+257];
@@ -218,7 +218,7 @@ static int matchpos, matchlen;
 
 static void init_tree()
 {
-	//-- 木を初期化
+	//-- ?????????
 
 	int i;
 	for( i=N+1; i<=N+256; i++ ) // root: 0x00 -- 0xff
@@ -229,23 +229,23 @@ static void init_tree()
 
 static void insert_node( int r )
 {
-	//-- [位置r]から始まる[列str]を木に登録
+	//-- [??ur]????n???[??str]????o?^
 	unsigned char* str = window + r;
 	rson[r] = lson[r] = N;
 
-	//-- ついでに一致長・位置も記録する
+	//-- ???????v???E??u???L?^????
 	matchlen = 2;
 
-	// 一文字目でrootを選ぶ
+	// ???????root??I??
 	int i, p = N+1+str[0], cmp=1;
 	for(; ;)
 	{
 		if( cmp >= 0 )
 		{
-			// 右に進む
+			// ?E??i??
 			if( rson[p] != N )
 				p = rson[p];
-			// 右にはもうnodeがないのでそこに登録して終了
+			// ?E??????node?????????????o?^????I??
 			else
 			{
 				rson[p] = r;
@@ -255,10 +255,10 @@ static void insert_node( int r )
 		}
 		else
 		{
-			// 左に進む
+			// ????i??
 			if( lson[p] != N )
 				p = lson[p];
-			// 左にはもうnodeがないのでそこに登録して終了
+			// ????????node?????????????o?^????I??
 			else
 			{
 				lson[p] = r;
@@ -267,12 +267,12 @@ static void insert_node( int r )
 			}
 		}
 
-		// 現在のnodeとstrを比較( i==一致長 )
+		// ?????node??str???r( i==??v?? )
 		for( i=1; i<F; i++ )
 			if( cmp = str[i] - window[p+i] )
 				break;
 
-		// 今まで見つけたものの中で最長だったら記憶
+		// ?????????????????????????????L??
 		if( i > matchlen )
 		{
 			matchpos = p;
@@ -281,8 +281,8 @@ static void insert_node( int r )
 		}
 	}
 
-	// [位置p]の列と長さFで一致した場合、ここに来る
-	// p の在ったところを r で置き換える
+	// [??up]???????F???v???????A?????????
+	// p ???????????? r ??u????????
 
 	 dad[r] =  dad[p];
 	lson[r] = lson[p];
@@ -300,24 +300,24 @@ static void insert_node( int r )
 
 static void delete_node( int p )
 {
-	//-- [位置p]の要素を木から削除
+	//-- [??up]??v?f???????
 
-	if( dad[p] == N ) // 既に木に入ってないのでおしまい
+	if( dad[p] == N ) // ??????????????????????
 		return;
 
 	int q;
 
 	if( rson[p] == N )
-		q = lson[p]; // 唯一の子を上に持ち上げる
+		q = lson[p]; // ?B???q??????????O??
 	else if( lson[p] == N )
-		q = rson[p]; // 唯一の子を上に持ち上げる
+		q = rson[p]; // ?B???q??????????O??
 	else
 	{
 		q = lson[p];
 
 		if( rson[q] != N )
 		{
-			// 左の枝の最右、つまり自分より一つ小さいnodeを持ち上げる
+			// ????}???E?A????????????????node????????O??
 			do
 				q = rson[q];
 			while( rson[q] != N );
@@ -344,14 +344,14 @@ bool CArcMsc::do_lzss( kiFile& in, kiFile& out, CArcProgressDlg& dlg )
 	int i, c, len, r, s;
 	unsigned char code[17]={0}, mask=1, codeptr=1;
 
-	s = 2;		// s = データ読込位置
-	r = N - 16;	// r = 木への挿入位置
+	s = 2;		// s = ?f?[?^?????u
+	r = N - 16;	// r = ????}????u
 
-	// クリア
+	// ?N???A
 	init_tree();
 	ki_memset( window+2, ' ', N-F );
 
-	// 先頭18bytes入力
+	// ??18bytes????
 	for( len=0 ; len<F ; len++ )
 	{
 		if( -1 == (c = in.getc()) )
@@ -363,11 +363,11 @@ bool CArcMsc::do_lzss( kiFile& in, kiFile& out, CArcProgressDlg& dlg )
 	if( len==0 )
 		return true;
 
-	// 木へ挿入
+	// ???}??
 	for( i=F ; i>=0 ; i-- )
 		insert_node( r-i );
 
-	// ループ
+	// ???[?v
 	unsigned int total_read=18,prgr_read=0;
 
 	do
@@ -386,28 +386,28 @@ bool CArcMsc::do_lzss( kiFile& in, kiFile& out, CArcProgressDlg& dlg )
 		if( matchlen > len )
 			matchlen=len;
 
-		if( matchlen < 3 )	// 一致なし
+		if( matchlen < 3 )	// ??v???
 		{
 			matchlen = 1;
 			code[0] |= mask;
 			code[codeptr++] = window[r];
 		}
-		else				// 一致あり
+		else				// ??v????
 		{
 			// [pos&0xff] [pos&0xf00 | len-3]
 			code[codeptr++] = (unsigned char)matchpos;
 			code[codeptr++] = (unsigned char)(((matchpos>>4)&0xf0) | (matchlen-3));
 		}
 
-		if( (mask<<=1)==0 ) // code が 8Block になっていたら出力
+		if( (mask<<=1)==0 ) // code ?? 8Block ???????????o??
 		{
 			out.write( code, codeptr );
-			// コードバッファ初期化
+			// ?R?[?h?o?b?t?@??????
 			code[0] = 0;
 			codeptr = mask = 1;
 		}
 
-		// 出力した分読み込む
+		// ?o?????????????
 		int lastmatchlen = matchlen;
 		for( i=0 ; i<lastmatchlen; i++ )
 		{
@@ -415,7 +415,7 @@ bool CArcMsc::do_lzss( kiFile& in, kiFile& out, CArcProgressDlg& dlg )
 				break;
 			prgr_read++;
 
-			// [位置s]に一文字書き込み
+			// [??us]?????????????
 			delete_node( s );
 			window[s] = c;
 			if( s < F-1 ) window[ N+s ] = c;
@@ -423,11 +423,11 @@ bool CArcMsc::do_lzss( kiFile& in, kiFile& out, CArcProgressDlg& dlg )
 			s = (s+1) & (N-1); // s++
 			r = (r+1) & (N-1); // r++
 
-			// 木に[位置r]のデータを挿入
+			// ???[??ur]??f?[?^??}??
 			insert_node( r );
 		}
 
-		// EOF後処理
+		// EOF????
 		while( i++ < lastmatchlen )
 		{
 			delete_node( s );
@@ -442,7 +442,7 @@ bool CArcMsc::do_lzss( kiFile& in, kiFile& out, CArcProgressDlg& dlg )
 	if( prgr_read==0xffffffff )
 		return false;
 
-	// 8block境界に揃える
+	// 8block???E???????
 	if( mask != 1 )
 	{
 		while( mask<<=1 )

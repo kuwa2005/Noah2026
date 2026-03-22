@@ -319,7 +319,15 @@ void CNoahApp::open_folder( const kiPath& path, int from )
 		const char* tmpl = m_cnfMan.openby();
 		if( !build_open_folder_cmd( cmdline, sizeof cmdline, tmpl, (const char*)dir ) )
 			build_open_folder_cmd( cmdline, sizeof cmdline, "explorer.exe \"%s\"", (const char*)dir );
-		::WinExec( cmdline, SW_SHOWDEFAULT );
+		STARTUPINFOA si = { sizeof(si) };
+		si.dwFlags = STARTF_USESHOWWINDOW;
+		si.wShowWindow = SW_SHOWDEFAULT;
+		PROCESS_INFORMATION pi = {};
+		if( ::CreateProcessA( NULL, cmdline, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi ) )
+		{
+			::CloseHandle( pi.hThread );
+			::CloseHandle( pi.hProcess );
+		}
 	}
 }
 

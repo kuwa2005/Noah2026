@@ -205,6 +205,7 @@ bool CArcViewDlg::giveData( const FORMATETC& fmt, STGMEDIUM* stg, bool firstcall
 				flen += (tmp.len()+1);
 		}
 
+	const int totalFlen = flen;
 	HDROP hDrop = (HDROP)::GlobalAlloc( GHND, sizeof(DROPFILES)+flen+1 );
 
 	DROPFILES* dr = (DROPFILES*)::GlobalLock( hDrop );
@@ -227,7 +228,14 @@ bool CArcViewDlg::giveData( const FORMATETC& fmt, STGMEDIUM* stg, bool firstcall
 		}
 		else
 		{
-			ki_strcpy( buf,lst[i] );
+			const size_t rem = (size_t)((char*)dr + sizeof(DROPFILES) + (size_t)(unsigned)totalFlen + 1u - buf);
+			const size_t need = (size_t)lst[i].len() + 1u;
+			if( rem < need || 0 != ::strcpy_s( buf, rem, lst[i] ) )
+			{
+				::GlobalUnlock( hDrop );
+				::GlobalFree( hDrop );
+				return false;
+			}
 			for( int k=0; k!=lst[i].len(); k++ )
 				if( buf[k] == '/' )
 					buf[k] = '\\';
@@ -372,7 +380,15 @@ BOOL CALLBACK CArcViewDlg::proc( UINT msg, WPARAM wp, LPARAM lp )
 								if( *p=='/' )
 									*p = '\\';
 							tmp += yen;
-							::ShellExecute( hwnd(), NULL, tmp, NULL, m_tdir, SW_SHOWDEFAULT );
+							SHELLEXECUTEINFOA sei = { sizeof(sei) };
+							sei.hwnd = hwnd();
+							sei.lpVerb = NULL;
+							sei.lpFile = tmp;
+							sei.lpParameters = NULL;
+							sei.lpDirectory = m_tdir;
+							sei.nShow = SW_SHOWDEFAULT;
+							sei.fMask = SEE_MASK_NOASYNC;
+							::ShellExecuteExA( &sei );
 						}
 				}
 				kiSUtil::switchCurDirToExeDir(); // ?O?????
@@ -536,7 +552,15 @@ void CArcViewDlg::DoRMenu()
 						cmd += ( buf[k]=='/' ? '\\' : buf[k] );
 					cmd += "\" ";
 				}
-			ShellExecute(hwnd(),NULL,lst[id-IDSTART],cmd,NULL,SW_SHOW);
+			SHELLEXECUTEINFOA sei = { sizeof(sei) };
+			sei.hwnd = hwnd();
+			sei.lpVerb = NULL;
+			sei.lpFile = lst[id-IDSTART];
+			sei.lpParameters = cmd;
+			sei.lpDirectory = NULL;
+			sei.nShow = SW_SHOW;
+			sei.fMask = SEE_MASK_NOASYNC;
+			::ShellExecuteExA( &sei );
 		}
 	}
 }

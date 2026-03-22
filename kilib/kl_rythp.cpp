@@ -210,9 +210,17 @@ bool kiRythpVM::exec_function( const kiVar& name,
 		{
 			// (特殊処理)複数回呼ぶコードなのでコピらなきゃ駄目。
 			int L1=ki_strlen(a[1]), L2=ki_strlen(a[2]);
-			char* tmp = new char[ 1 + (L1>L2 ? L1 : L2) ];
-			while( getarg( ki_strcpy(tmp,a[1]), b[1], &t ), t.getInt()!=0 )
-				getarg( ki_strcpy(tmp,a[2]), b[2], r );
+			const size_t tmpcap = 1u + (size_t)(L1>L2 ? L1 : L2);
+			char* tmp = new char[tmpcap];
+			for( ;; )
+			{
+				ki_strcpy( tmp, tmpcap, a[1] );
+				getarg( tmp, b[1], &t );
+				if( t.getInt()==0 )
+					break;
+				ki_strcpy( tmp, tmpcap, a[2] );
+				getarg( tmp, b[2], r );
+			}
 			delete [] tmp;
 		}
 	}

@@ -83,7 +83,7 @@ unsigned long CNoahArchiverManager::set_files( const cCharArray& files )
 		if( kiFindFile::findfirst( files[i], &m_FName[c] ) )
 		{
 			if( m_FName[c].cAlternateFileName[0] == '\0' )
-				::lstrcpy(m_FName[c].cAlternateFileName,m_FName[c].cFileName);
+				::strcpy_s( m_FName[c].cAlternateFileName, sizeof m_FName[c].cAlternateFileName, m_FName[c].cFileName );
 			m_BasePathList[c] = files[i];
 			if( !m_BasePathList[c].beDirOnly() )
 			{
@@ -462,7 +462,7 @@ bool CNoahArchiverManager::break_ddir( kiPath& dir, bool onlydir )
 
 //-- ????P???????????????????m?F -----------------
 	char wild[MAX_PATH];
-	ki_strcpy( wild, dir );
+	ki_strcpy( wild, (const char*)dir );
 	ki_strcat( wild, "*.*" );
 	kiFindFile find;
 	if( !find.begin( wild ) )

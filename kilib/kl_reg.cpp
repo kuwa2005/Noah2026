@@ -5,7 +5,7 @@
 #include "kilib.h"
 
 
-//---------------------------- openån ----------------------------//
+//---------------------------- open?n ----------------------------//
 
 
 bool kiRegKey::open( HKEY parent, LPCTSTR keyname, REGSAM access )
@@ -22,7 +22,7 @@ bool kiRegKey::create( HKEY parent, LPCTSTR keyname, REGSAM access )
 }
 
 
-//------------------------- query/setån ----------------------------//
+//------------------------- query/set?n ----------------------------//
 
 
 bool kiRegKey::get( LPCTSTR valname, DWORD* val )
@@ -70,7 +70,7 @@ bool kiRegKey::set( LPCTSTR valname, LPCTSTR val )
 }
 
 
-//--------------------------- deleteån ----------------------------//
+//--------------------------- delete?n ----------------------------//
 
 
 bool kiRegKey::del( LPCTSTR valname )
@@ -110,7 +110,7 @@ bool kiRegKey::delSubKeyRecursive( HKEY k, LPCTSTR n )
 	return ans;
 }
 
-//--------------------------- ini:èâä˙âª ----------------------------//
+//--------------------------- ini:è??˙?ª ----------------------------//
 
 
 void kiIniFile::setFileName( const char* ini, bool exepath )
@@ -126,7 +126,7 @@ void kiIniFile::setFileName( const char* ini, bool exepath )
 }
 
 
-//--------------------------- ini:readån ----------------------------//
+//--------------------------- ini:read?n ----------------------------//
 
 
 int kiIniFile::getInt( const char* key, int defval )
@@ -148,7 +148,7 @@ const char* kiIniFile::getStr( const char* key, const char* defval )
 }
 
 
-//--------------------------- ini:writeån ----------------------------//
+//--------------------------- ini:write?n ----------------------------//
 
 
 bool kiIniFile::putStr( const char* key, const char* val )
@@ -159,7 +159,7 @@ bool kiIniFile::putStr( const char* key, const char* val )
 
 bool kiIniFile::putInt( const char* key, int val )
 {
-	::wsprintf( m_StrBuf, "%d", val );
+	::sprintf_s( m_StrBuf, sizeof(m_StrBuf), "%d", val );
 	return putStr( key, m_StrBuf );
 }
 

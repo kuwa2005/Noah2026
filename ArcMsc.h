@@ -25,7 +25,7 @@ private:
 
 private:
 	bool header( kiFile& fp, unsigned long* siz, char* ext );
-	void filename( char* oname, const char* ol, char ext );
+	void filename( char* oname, size_t onameCap, const char* ol, char ext );
 	bool do_lzss( kiFile& in, kiFile& out, CArcProgressDlg& dlg );
 };
 

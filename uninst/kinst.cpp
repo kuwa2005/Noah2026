@@ -4,18 +4,18 @@
 #include "resource.h"
 
 
-//-- G—pFunctions ----------------------------------------------------------
+//-- ?G?pFunctions ----------------------------------------------------------
 
 void getProgramFiles( kiPath* path )
 {
-	// ‚PDƒŒƒWƒXƒgƒŠ‚©‚ç
+	// ?P?D???W?X?g??????
 	kiRegKey key;
 	if( key.open( HKEY_CLASSES_ROOT, "Software\\Microsoft\\Windows\\CurrentVersion", KEY_QUERY_VALUE ) )
 		if( key.get( "ProgramFilesDir",  path )
 		 || key.get( "ProgramFilesPath", path ) )
 			return;
 
-	// ‚QDWindowsƒfƒBƒŒƒNƒgƒŠ‚©‚ç‚Ì—Ş„
+	// ?Q?DWindows?f?B???N?g?????????
 	char buf[MAX_PATH];
 	if( ::GetWindowsDirectory( buf, MAX_PATH ) )
 	{
@@ -27,7 +27,7 @@ void getProgramFiles( kiPath* path )
 			return;
 	}
 
-	// ‚RD‚µ‚á[‚È‚¢‚Ì‚Å‹N“®ƒfƒBƒŒƒNƒgƒŠ
+	// ?R?D????[??????N???f?B???N?g??
 	path->beSpecialPath( kiPath::Exe );
 }
 
@@ -53,14 +53,14 @@ void createShortCut( const kiPath& original, const kiPath& at, const char* name 
 }
 
 
-//-- ƒƒCƒ“ -------------------------------------------------------------------
+//-- ???C?? -------------------------------------------------------------------
 
-class CKInstApp : public kiApp, kiDialog // kiApp‚ÌƒRƒ“ƒXƒgƒ‰ƒNƒ^‚ªæ‚ÉŒÄ‚Î‚ê‚È‚¢‚Æ€‚ÊB‚æ‚ë‚µ‚­‚È‚¢B
+class CKInstApp : public kiApp, kiDialog // kiApp??R???X?g???N?^???????????????B?????????B
 {
 	CKInstApp() : kiDialog( IDD_MAIN ) {}
 	friend void kilib_create_new_app();
 
-//-- ƒƒCƒ“ƒ‹[ƒ`ƒ“ ---------
+//-- ???C?????[?`?? ---------
 
 	void run( kiCmdParser& cmd )
 	{
@@ -124,18 +124,18 @@ class CKInstApp : public kiApp, kiDialog // kiApp‚ÌƒRƒ“ƒXƒgƒ‰ƒNƒ^‚ªæ‚ÉŒÄ‚Î‚ê‚È‚
 		STARTUPINFO si;	ki_memzero( &si,sizeof(si) ); si.cb=sizeof(si);
 		if( !::CreateProcess( NULL,const_cast<char*>((const char*)to),
 			NULL,NULL,FALSE,CREATE_NEW_PROCESS_GROUP|NORMAL_PRIORITY_CLASS,NULL,NULL,&si,&pi ) )
-			return; // ‹N“®‚Å‚«‚È‚©‚Á‚½cB
+			return; // ?N?????????????c?B
 
 		::CloseHandle( pi.hThread );
 		::CloseHandle( pi.hProcess );
 
-		// ƒŒƒWƒXƒgƒŠ‚ÌƒAƒ“ƒCƒ“ƒXƒg[ƒ‹î•ñíœ
+		// ???W?X?g????A???C???X?g?[??????
 		kiRegKey key;
 		if( key.open( HKEY_LOCAL_MACHINE, "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall" ) )
 			key.delSubKey( "Noah" );
 	}
 
-//-- ƒƒCƒ“ƒ_ƒCƒAƒƒO‚Ìˆ— --
+//-- ???C???_?C?A???O????? --
 
 	bool onOK()
 	{
@@ -162,9 +162,9 @@ class CKInstApp : public kiApp, kiDialog // kiApp‚ÌƒRƒ“ƒXƒgƒ‰ƒNƒ^‚ªæ‚ÉŒÄ‚Î‚ê‚È‚
 
 		kiPath prg;
 		getPrevPos( &prg );
-		if( prg.len()==0 ) // V‹KƒCƒ“ƒXƒg[ƒ‹
+		if( prg.len()==0 ) // ?V?K?C???X?g?[??
 			getProgramFiles( &prg ), prg.beBackSlash(true), prg += "Noah\\";
-		else // Šù‚É‘¶İ‚µ‚Ä‚éê‡
+		else // ????????????
 		{
 			HINSTANCE hDLL = kiSUtil::loadLibrary( "NoahXt.dll" );
 			if( hDLL )
@@ -220,7 +220,7 @@ class CKInstApp : public kiApp, kiDialog // kiApp‚ÌƒRƒ“ƒXƒgƒ‰ƒNƒ^‚ªæ‚ÉŒÄ‚Î‚ê‚È‚
 		return TRUE;
 	}
 
-//-- ƒCƒ“ƒXƒg[ƒ‹ ---------
+//-- ?C???X?g?[?? ---------
 
 	bool m_assoc[18]; // LZH-JAK, 7Z, CMP MLT, SND DSK STT
 	kiPath m_destdir;
@@ -230,10 +230,10 @@ class CKInstApp : public kiApp, kiDialog // kiApp‚ÌƒRƒ“ƒXƒgƒ‰ƒNƒ^‚ªæ‚ÉŒÄ‚Î‚ê‚È‚
 		kiPath exe(kiPath::Exe,false), inst(m_destdir);
 		inst.beBackSlash(false);
 
-		// ‚Æ‚è‚ ‚¦‚¸‘SƒRƒs
+		// ????????S?R?s
 		bool r = copy_dir2dir(exe,inst);
 
-		// manual‚ÌŒ¾Œê‚ğ‚Ä‚¯‚Æ[‚É’²®
+		// manual???????????[?????
 		kiPath manE(m_destdir), manJ(m_destdir);
 		manE.beBackSlash(true), manJ.beBackSlash(true);
 		manE += "manual-e.htm", manJ += "manual.htm";
@@ -246,7 +246,7 @@ class CKInstApp : public kiApp, kiDialog // kiApp‚ÌƒRƒ“ƒXƒgƒ‰ƒNƒ^‚ªæ‚ÉŒÄ‚Î‚ê‚È‚
 
 	bool regist()
 	{
-		// NoahXt.dll‚É‚æ‚éˆ—
+		// NoahXt.dll????Y??
 		kiPath xtdll( m_destdir );
 		xtdll += "NoahXt.dll";
 		HINSTANCE hDLL = kiSUtil::loadLibrary( xtdll );
@@ -270,7 +270,7 @@ class CKInstApp : public kiApp, kiDialog // kiApp‚ÌƒRƒ“ƒXƒgƒ‰ƒNƒ^‚ªæ‚ÉŒÄ‚Î‚ê‚È‚
 			::FreeLibrary( hDLL );
 		}
 
-		// ƒVƒ‡[ƒgƒJƒbƒg
+		// ?V???[?g?J?b?g
 		::CoInitialize( NULL );
 			kiPath tmp(m_destdir); tmp += "Noah.exe";
 			if( m_assoc[15] )
@@ -293,7 +293,7 @@ class CKInstApp : public kiApp, kiDialog // kiApp‚ÌƒRƒ“ƒXƒgƒ‰ƒNƒ^‚ªæ‚ÉŒÄ‚Î‚ê‚È‚
 			}
 		::CoUninitialize();
 
-		// ƒAƒ“ƒCƒ“ƒXƒg[ƒ‹î•ñ‚ğƒŒƒWƒXƒgƒŠ‚Ö
+		// ?A???C???X?g?[?????????W?X?g????
 		kiPath uninst( m_destdir );
 		uninst += "uninst.exe";
 
@@ -315,14 +315,14 @@ class CKInstApp : public kiApp, kiDialog // kiApp‚ÌƒRƒ“ƒXƒgƒ‰ƒNƒ^‚ªæ‚ÉŒÄ‚Î‚ê‚È‚
 			cld += "caldix.exe";
 			cld += '"';
 
-			// ƒvƒƒZƒXŠJn
+			// ?v???Z?X?J?n
 			PROCESS_INFORMATION pi;
 			STARTUPINFO si;	ki_memzero( &si,sizeof(si) ); si.cb=sizeof(si);
 			if( !::CreateProcess( NULL,const_cast<char*>((const char*)cld),
 				NULL,NULL,FALSE,CREATE_NEW_PROCESS_GROUP|NORMAL_PRIORITY_CLASS,NULL,NULL,&si,&pi ) )
 				return;
 
-			// I—¹‘Ò‹@
+			// ?I????@
 			::CloseHandle( pi.hThread );
 			::WaitForSingleObject( pi.hProcess, INFINITE );
 			::CloseHandle( pi.hProcess );
@@ -368,7 +368,7 @@ class CKInstApp : public kiApp, kiDialog // kiApp‚ÌƒRƒ“ƒXƒgƒ‰ƒNƒ^‚ªæ‚ÉŒÄ‚Î‚ê‚È‚
 		path->beDirOnly();
 	}
 
-//-- ƒAƒ“ƒCƒ“ƒXƒg[ƒ‹ ---------
+//-- ?A???C???X?g?[?? ---------
 
 	typedef bool (WINAPI * XT_IA)();
 	typedef void (WINAPI * XT_LS)(bool*,bool*);
@@ -378,7 +378,7 @@ class CKInstApp : public kiApp, kiDialog // kiApp‚ÌƒRƒ“ƒXƒgƒ‰ƒNƒ^‚ªæ‚ÉŒÄ‚Î‚ê‚È‚
 	typedef void (WINAPI * XT_LAX)(const char*,bool*);
 	bool unregist()
 	{
-		// NoahXt.dll‚É‚æ‚éˆ—
+		// NoahXt.dll????Y??
 		kiPath xtdll( m_destdir );
 		xtdll += "NoahXt.dll";
 		HINSTANCE hDLL = kiSUtil::loadLibrary( xtdll );
@@ -399,7 +399,7 @@ class CKInstApp : public kiApp, kiDialog // kiApp‚ÌƒRƒ“ƒXƒgƒ‰ƒNƒ^‚ªæ‚ÉŒÄ‚Î‚ê‚È‚
 			::FreeLibrary( hDLL );
 		}
 
-		// ƒVƒ‡[ƒgƒJƒbƒg
+		// ?V???[?g?J?b?g
 		::CoInitialize( NULL );
 		kiPath snd(kiPath::Snd); snd += "Noah.lnk";
 		kiPath dsk(kiPath::Dsk); dsk += "Noah.lnk";
@@ -427,14 +427,14 @@ class CKInstApp : public kiApp, kiDialog // kiApp‚ÌƒRƒ“ƒXƒgƒ‰ƒNƒ^‚ªæ‚ÉŒÄ‚Î‚ê‚È‚
 
 		f.begin( b2ewild+="b2e\\*.b2e" );
 		while( f.next(&fd) )
-			if( fd.cFileName[0] != '#' ) // # •t‚«‚Íˆ³kê—p
+			if( fd.cFileName[0] != '#' ) // # ?t??????k??p
 			{
-				// Šg’£q‚ğØ‚èo‚µ
+				// ?g???q????o??
 				::CharLower( fd.cFileName );
 				first_dot = const_cast<char*>(kiPath::ext_all(fd.cFileName)-1);
 				*first_dot = '\0';
 				crack_str( fd.cFileName );
-				// ŠÖ˜A‚Ã‚¯íœ
+				// ??A?????
 				SaveASEx( fd.cFileName, false );
 			}
 		SaveASEx( "7z\0", false );
@@ -446,7 +446,7 @@ class CKInstApp : public kiApp, kiDialog // kiApp‚ÌƒRƒ“ƒXƒgƒ‰ƒNƒ^‚ªæ‚ÉŒÄ‚Î‚ê‚È‚
 
 		kiPath tmp;
 		m_destdir.beBackSlash(true);
-		// ƒCƒ“ƒXƒg[ƒ‹‚µ‚½ƒ‚ƒm‚¾‚¯‘Síœ
+		// ?C???X?g?[?????????m?????S??
 		tmp=m_destdir, tmp+="Noah.exe",   ::DeleteFile(tmp);
 		tmp=m_destdir, tmp+="Noah.ini",   ::DeleteFile(tmp);
 		tmp=m_destdir, tmp+="uninst.exe", ::DeleteFile(tmp);
@@ -460,7 +460,7 @@ class CKInstApp : public kiApp, kiDialog // kiApp‚ÌƒRƒ“ƒXƒgƒ‰ƒNƒ^‚ªæ‚ÉŒÄ‚Î‚ê‚È‚
 		tmp=m_destdir, tmp+="b2e",        ::RemoveDirectory(tmp);
 		tmp=m_destdir, tmp+="NoahXt.dll", ::DeleteFile(tmp);
 		::RemoveDirectory(m_destdir);
-		// NoahXt.dll‚ÍÄ‹N“®Œã‚É‰ñ‚·‚©‚à’m‚ê‚È‚¢
+		// NoahXt.dll???N??????????m????
 		if( kiSUtil::exist(tmp) )
 		{
 			kill_later(tmp);
@@ -478,58 +478,77 @@ class CKInstApp : public kiApp, kiDialog // kiApp‚ÌƒRƒ“ƒXƒgƒ‰ƒNƒ^‚ªæ‚ÉŒÄ‚Î‚ê‚È‚
 		if( ::MoveFileEx( pszFile, NULL, MOVEFILE_DELAY_UNTIL_REBOOT ) )
 			return;
 		char shortPath[MAX_PATH];
-		::GetShortPathName( pszFile, shortPath, sizeof(shortPath) );
+		if( !::GetShortPathName( pszFile, shortPath, sizeof(shortPath) ) )
+			return;
 
 		kiPath inifile( kiPath::Win ); inifile+="wininit.ini";
 
 		char buf[30000];
-		::GetPrivateProfileSection( "Rename", buf, 30000, inifile ); 
-		char* p = buf; 
+		DWORD n = ::GetPrivateProfileSection( "Rename", buf, sizeof(buf), inifile );
+		if( n >= sizeof(buf) - 2 )
+			return;
+		char* p = buf;
 		while(*p)while(*p++);
 
-		::lstrcpy( p, "NUL=" );
-		::lstrcat( p, shortPath );
+		size_t rem = sizeof(buf) - (size_t)(p - buf);
+		if( FAILED( StringCchCopyA( p, rem, "NUL=" ) )
+		 || FAILED( StringCchCatA( p, rem, shortPath ) ) )
+			return;
 		while(*p++);
-		*p='\0'; 
+		if( sizeof(buf) - (size_t)(p - buf) < 1u )
+			return;
+		*p='\0';
 
 		::WritePrivateProfileSection( "Rename", buf, inifile );
 
-		// ŠmÀ‚É‘‚«‚Ş
+		// ?m???????????
 		::WritePrivateProfileString( NULL, NULL, NULL, inifile );
 	}
 
 	bool copy_later( const char* from, const char* to )
 	{
 		char from_temp[MAX_PATH];
-		::lstrcpy( from_temp, to );
-		::lstrcat( from_temp, ".new" );
+		if( FAILED( StringCchCopyA( from_temp, sizeof(from_temp), to ) )
+		 || FAILED( StringCchCatA( from_temp, sizeof(from_temp), ".new" ) ) )
+			return false;
 		if( !::CopyFile( from, from_temp, FALSE ) )
 			return false;
 
 		char shortFrom[MAX_PATH];
-		::GetShortPathName( from_temp, shortFrom, sizeof(shortFrom) );
 		char shortTo[MAX_PATH];
-		::GetShortPathName( to, shortTo, sizeof(shortTo) );
+		if( !::GetShortPathName( from_temp, shortFrom, sizeof(shortFrom) )
+		 || !::GetShortPathName( to, shortTo, sizeof(shortTo) ) )
+			return false;
 		kiPath inifile( kiPath::Win ); inifile+="wininit.ini";
 
 		char buf[30000];
-		::GetPrivateProfileSection( "Rename", buf, 30000, inifile ); 
-		char* p = buf; 
+		DWORD n = ::GetPrivateProfileSection( "Rename", buf, sizeof(buf), inifile );
+		if( n >= sizeof(buf) - 2 )
+			return false;
+		char* p = buf;
 		while(*p)while(*p++);
 
-		::lstrcpy( p, "NUL=" );
-		::lstrcat( p, shortTo );
+		size_t rem = sizeof(buf) - (size_t)(p - buf);
+		if( FAILED( StringCchCopyA( p, rem, "NUL=" ) )
+		 || FAILED( StringCchCatA( p, rem, shortTo ) ) )
+			return false;
 		while(*p++);
-		*p++='\r',*p++='\n'; 
-		::lstrcpy( p, shortTo );
-		::lstrcat( p, "=" );
-		::lstrcat( p, shortFrom );
+		if( sizeof(buf) - (size_t)(p - buf) < 2u )
+			return false;
+		*p++='\r',*p++='\n';
+		rem = sizeof(buf) - (size_t)(p - buf);
+		if( FAILED( StringCchCopyA( p, rem, shortTo ) )
+		 || FAILED( StringCchCatA( p, rem, "=" ) )
+		 || FAILED( StringCchCatA( p, rem, shortFrom ) ) )
+			return false;
 		while(*p++);
-		*p='\0'; 
+		if( sizeof(buf) - (size_t)(p - buf) < 1u )
+			return false;
+		*p='\0';
 
 		::WritePrivateProfileSection( "Rename", buf, inifile );
 
-		// ŠmÀ‚É‘‚«‚Ş
+		// ?m???????????
 		::WritePrivateProfileString( NULL, NULL, NULL, inifile );
 		return true;
 	}

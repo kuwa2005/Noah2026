@@ -20,8 +20,9 @@ kiCmdParser::kiCmdParser( const char* cmd, bool ignoreFirst )
 	m_Buffer=NULL;
 	if( cmd )
 	{
-		m_Buffer = new char[ ki_strlen(cmd)+1 ];
-		ki_strcpy( m_Buffer, cmd );
+		const size_t n = (size_t)ki_strlen(cmd)+1;
+		m_Buffer = new char[n];
+		ki_strcpy( m_Buffer, n, cmd );
 		doit( m_Buffer, ignoreFirst );
 	}
 }
